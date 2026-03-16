@@ -14,18 +14,49 @@ Version Elastic utilisée par défaut :
 
 ## Architecture
 
-Le projet démarre 3 conteneurs :
+Le projet démarre 3 conteneurs principaux :
 
 - `elasticsearch` sur le port `9200`
 - `logstash` sur les ports `5000` et `5044`
 - `kibana` sur le port `5601`
 
-Flux principal :
+### Schema d'architecture
 
-1. Tu déposes ou analyses des logs dans `log_analysed/`
-2. Logstash lit les fichiers `.log`
-3. Logstash envoie les événements dans Elasticsearch
-4. Kibana affiche les données stockées
+```mermaid
+flowchart LR
+    U[Utilisateur] -->|Navigateur| K[Kibana<br/>localhost:5601]
+    U -->|API HTTP| E[Elasticsearch<br/>localhost:9200]
+    U -->|TCP JSON| L[Logstash<br/>localhost:5000]
+
+    subgraph HOST[Machine locale / Docker Compose]
+        LF[log_analysed/*.log]
+        LP[logstash/pipeline/logstash.conf]
+        ED[(Volume Docker<br/>esdata)]
+
+        LF -->|Lecture des fichiers .log| L
+        LP -->|Pipeline de parsing| L
+        L -->|Indexation elk-demo-*| E
+        E -->|Recherche / agrégations| K
+        E --> ED
+    end
+```
+
+### Lecture du schema
+
+1. Les logs applicatifs sont stockes dans `log_analysed/`
+2. Docker monte ce dossier dans le conteneur `logstash`
+3. Logstash lit les fichiers, nettoie les logs et extrait les champs utiles
+4. Les evenements sont envoyes dans Elasticsearch dans les index `elk-demo-*`
+5. Kibana interroge Elasticsearch pour afficher les logs, filtres, tableaux et dashboards
+
+### Flux principal
+
+```text
+log_analysed/*.log
+   -> Logstash
+   -> Elasticsearch
+   -> Kibana
+```
 
 ## Structure du projet
 
