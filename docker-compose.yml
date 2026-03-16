@@ -1,6 +1,6 @@
 services:
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION:-8.11.1}
+    image: docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION:-8.19.11}
     container_name: elk-elasticsearch
     environment:
       - discovery.type=single-node
@@ -17,7 +17,7 @@ services:
       retries: 20
 
   logstash:
-    image: docker.elastic.co/logstash/logstash:${STACK_VERSION:-8.11.1}
+    image: docker.elastic.co/logstash/logstash:${STACK_VERSION:-8.19.11}
     container_name: elk-logstash
     depends_on:
       elasticsearch:
@@ -33,7 +33,7 @@ services:
       - ./log_analysed:/var/log/analysed:ro
 
   kibana:
-    image: docker.elastic.co/kibana/kibana:${STACK_VERSION:-8.11.1}
+    image: docker.elastic.co/kibana/kibana:${STACK_VERSION:-8.19.11}
     container_name: elk-kibana
     depends_on:
       elasticsearch:

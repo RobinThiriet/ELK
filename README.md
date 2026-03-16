@@ -8,6 +8,10 @@ Ce projet fournit une stack **ELK** simple à démarrer en local avec Docker Com
 
 L'objectif est d'avoir un environnement prêt pour apprendre ELK, faire des tests locaux, ou démarrer une petite démo rapidement.
 
+Version Elastic utilisée par défaut :
+
+- `8.19.11`
+
 ## Architecture
 
 Le projet démarre 3 conteneurs :
