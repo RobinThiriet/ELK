@@ -41,6 +41,11 @@ Flux principal :
 │   ├── order_service.log
 │   ├── product_service.log
 │   └── user_service.log
+├── images
+│   ├── Welcome.png
+│   ├── data_views.png
+│   ├── Discover.png
+│   └── dashboard.png
 └── README.md
 ```
 
@@ -157,6 +162,26 @@ Kibana peut mettre 30 à 90 secondes à être complètement prêt après le dém
 Important : `http://localhost:5000` ne doit pas être ouvert dans un navigateur.
 
 Le port `5000` n'est pas une interface web. C'est une **entrée TCP** utilisée par Logstash pour recevoir des événements JSON.
+
+## Captures d'ecran
+
+Quelques captures du projet sont incluses dans le depot :
+
+### Page d'accueil Kibana
+
+![Accueil Kibana](images/Welcome.png)
+
+### Data View creee pour les logs
+
+![Data View](images/data_views.png)
+
+### Exploration des logs dans Discover
+
+![Discover](images/Discover.png)
+
+### Dashboard de visualisation
+
+![Dashboard](images/dashboard.png)
 
 ## Comment utiliser la stack
 
