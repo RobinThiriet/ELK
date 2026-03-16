@@ -3,8 +3,11 @@ services:
     image: docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION:-8.19.11}
     container_name: elk-elasticsearch
     environment:
+      # Noeud unique pour un usage local, sans cluster multi-noeuds.
       - discovery.type=single-node
+      # Securite desactivee pour simplifier le TP en local.
       - xpack.security.enabled=false
+      # Memoire Java limitee a 512 Mo pour eviter de surcharger la machine.
       - ES_JAVA_OPTS=-Xms512m -Xmx512m
     ports:
       - "9200:9200"

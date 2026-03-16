@@ -103,6 +103,15 @@ Déclare les 3 services ELK :
 - Logstash avec la pipeline montée depuis le dossier local
 - Kibana connecté à Elasticsearch
 
+Reglages Elasticsearch utilises dans la stack :
+
+- `discovery.type=single-node`
+  Pas de cluster, un seul noeud Elasticsearch pour le TP
+- `xpack.security.enabled=false`
+  Securite desactivee pour simplifier les tests en local
+- `ES_JAVA_OPTS="-Xms512m -Xmx512m"`
+  Limitation memoire a 512 Mo pour reduire la consommation RAM
+
 ### `logstash/pipeline/logstash.conf`
 
 Cette pipeline :
