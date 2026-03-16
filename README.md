@@ -18,7 +18,7 @@ Le projet démarre 3 conteneurs :
 
 Flux principal :
 
-1. Tu ajoutes des logs dans le dossier `logs/`
+1. Tu déposes ou analyses des logs dans `log_analysed/`
 2. Logstash lit les fichiers `.log`
 3. Logstash envoie les événements dans Elasticsearch
 4. Kibana affiche les données stockées
@@ -33,6 +33,10 @@ Flux principal :
 │       └── logstash.conf
 ├── logs
 │   └── app.log
+├── log_analysed
+│   ├── order_service.log
+│   ├── product_service.log
+│   └── user_service.log
 └── README.md
 ```
 
@@ -65,11 +69,30 @@ Cette pipeline :
 
 - lit tous les fichiers `*.log` du dossier `/var/log/demo`
 - écoute aussi sur le port TCP `5000` au format JSON
-- envoie tout dans l'index `logs-demo-YYYY.MM.dd`
+- envoie tout dans l'index `elk-demo-YYYY.MM.dd`
 
-### `logs/app.log`
+### `log_analysed/`
 
-Fichier d'exemple pour tester immédiatement l'ingestion.
+Dossier principal pour la consigne.
+
+Il contient les logs à analyser :
+
+- `user_service.log`
+- `product_service.log`
+- `order_service.log`
+
+La pipeline Logstash extrait automatiquement plusieurs champs utiles :
+
+- `service`
+- `level`
+- `event_type`
+- `http_method`
+- `url_path`
+- `status_code`
+- `user_id`
+- `user_name`
+- `order_id`
+- `product_name`
 
 ## Démarrage du projet
 
@@ -133,30 +156,25 @@ Le port `5000` n'est pas une interface web. C'est une **entrée TCP** utilisée 
 
 ## Comment utiliser la stack
 
-### Cas 1. Lire un fichier de logs
+### Cas 1. Lire les logs de `log_analysed`
 
-Le dossier local `./logs` est monté dans le conteneur Logstash.
+Le dossier local `./log_analysed` est monté dans le conteneur Logstash.
 
 Tous les fichiers avec l'extension `.log` sont lus automatiquement.
-
-Exemple :
-
-```bash
-echo "2026-03-16 10:15:00 INFO Nouveau log" >> logs/app.log
-```
-
-Autres exemples :
-
-```bash
-echo "2026-03-16 10:15:05 WARN Cache miss user=42" >> logs/app.log
-echo "2026-03-16 10:15:10 ERROR Payment service unavailable" >> logs/app.log
-```
 
 Ces événements seront envoyés dans Elasticsearch dans un index de type :
 
 ```text
-logs-demo-2026.03.16
+elk-demo-2026.03.16
 ```
+
+Ce que Logstash détecte dans ces fichiers :
+
+- les créations d'utilisateurs
+- les créations de commandes
+- les requêtes HTTP `GET` et `POST`
+- les codes de statut `200` et `201`
+- les messages de démarrage des services
 
 ### Cas 2. Envoyer un événement JSON à Logstash
 
@@ -185,13 +203,93 @@ Une fois Kibana disponible :
 5. Saisis le pattern :
 
 ```text
-logs-demo-*
+elk-demo-*
 ```
 
 6. Choisis `@timestamp` comme champ temporel si Kibana le propose
 7. Ouvre ensuite `Discover`
 
 Tu verras les événements ingérés par Logstash.
+
+## Analyse conseillée pour la consigne
+
+Une fois les logs chargés dans Kibana, tu peux faire cette analyse.
+
+### 1. Vérifier les services présents
+
+Dans `Discover`, filtre sur le champ `service`.
+
+Tu devrais retrouver :
+
+- `user_service`
+- `product_service`
+- `order_service`
+
+### 2. Compter les événements par type
+
+Regarde le champ `event_type` pour distinguer :
+
+- `user_created`
+- `order_created`
+- `business_request`
+- `http_access`
+- `startup_info`
+- `startup_warning`
+
+### 3. Analyser les utilisateurs créés
+
+Filtre :
+
+```text
+event_type : "user_created"
+```
+
+Champs intéressants :
+
+- `user_id`
+- `user_name`
+- `service`
+- `@timestamp`
+
+### 4. Analyser les commandes créées
+
+Filtre :
+
+```text
+event_type : "order_created"
+```
+
+Champs intéressants :
+
+- `order_id`
+- `user_id`
+- `product_name`
+- `service`
+
+### 5. Analyser les accès HTTP
+
+Filtre :
+
+```text
+event_type : "http_access"
+```
+
+Tu peux ensuite regarder :
+
+- `http_method`
+- `url_path`
+- `status_code`
+- `client_ip`
+
+### 6. Faire des visualisations utiles
+
+Dans `Visualize` ou `Lens`, je te conseille :
+
+- un camembert par `service`
+- un histogramme par `event_type`
+- un tableau des `product_name` les plus commandés
+- un tableau des `user_name` les plus fréquents
+- une répartition des `status_code`
 
 ## Scénario de test complet
 
@@ -203,10 +301,10 @@ Voici un test simple du début à la fin :
 docker compose up -d
 ```
 
-2. Ajouter un log
+2. Vérifier que les fichiers de `log_analysed/` sont présents
 
 ```bash
-echo "2026-03-16 11:00:00 INFO test elk" >> logs/app.log
+ls log_analysed
 ```
 
 3. Ouvrir Kibana
@@ -215,11 +313,11 @@ echo "2026-03-16 11:00:00 INFO test elk" >> logs/app.log
 http://localhost:5601
 ```
 
-4. Créer la data view `logs-demo-*`
+4. Créer la data view `elk-demo-*`
 
 5. Aller dans `Discover` et rafraîchir
 
-Tu devrais alors voir le log apparaître.
+Tu devrais alors voir les événements des trois services apparaître.
 
 ## Commandes utiles
 
@@ -289,10 +387,10 @@ Vérifie :
 docker compose logs logstash
 ```
 
-Puis ajoute une nouvelle ligne dans `logs/app.log` :
+Puis vérifie que `log_analysed/` est bien monté et que Logstash lit les bons fichiers :
 
 ```bash
-echo "2026-03-16 12:00:00 INFO verification logstash" >> logs/app.log
+docker compose exec logstash ls /var/log/analysed
 ```
 
 ### Plus assez de mémoire
@@ -323,6 +421,6 @@ Pour utiliser ce projet :
 
 1. lance `docker compose up -d`
 2. ouvre `http://localhost:5601`
-3. crée la data view `logs-demo-*`
-4. ajoute des logs dans `logs/app.log`
-5. consulte-les dans `Discover`
+3. crée la data view `elk-demo-*`
+4. vérifie les champs extraits dans `Discover`
+5. analyse les événements par service et par type

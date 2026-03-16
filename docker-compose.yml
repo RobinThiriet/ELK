@@ -30,6 +30,7 @@ services:
     volumes:
       - ./logstash/pipeline:/usr/share/logstash/pipeline:ro
       - ./logs:/var/log/demo:ro
+      - ./log_analysed:/var/log/analysed:ro
 
   kibana:
     image: docker.elastic.co/kibana/kibana:${STACK_VERSION:-8.11.1}
