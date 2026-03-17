@@ -1,54 +1,36 @@
-# Observabilité des systèmes - Projet
+# Consigne 2 - Application Python a observer avec ELK
 
-Cette partie correspond a la `consigne 2` du projet :
+Ce dossier contient l'application utilisee pour la `consigne 2`.
 
-- demarrer un serveur Flask instable
-- demarrer un client qui genere du trafic
+But :
+
+- lancer un serveur Flask instable
+- lancer un client qui genere du trafic
 - produire des logs dynamiques
-- faire collecter ces logs par `Filebeat`
-- analyser le tout dans la stack ELK principale
+- envoyer ces logs vers la stack ELK principale grace a `Filebeat`
 
-Bienvenue dans le projet en Observabilité des systèmes !
+## Composants
 
-Dans ce README, vous trouverez un environnement d'application mock Python/Flask conçu pour tester vos compétences en matière d'observabilité et de surveillance.
+- `server` : API Flask instable avec simulateur de chaos
+- `client` : trafic HTTP continu vers le serveur
 
-## Votre Mission
-Votre objectif est de construire une infrastructure de surveillance complète pour cette application. Vous devez mettre en œuvre une pile complète d'observabilité (par exemple, Prometheus, Grafana, Zabbix, stack ELK) pour collecter efficacement les métriques et les données de journalisation.
+## Lancement
 
-**Attention :** Le serveur API contient un "Simulateur de Chaos" et est intrinsèquement instable. Il connaîtra des incidents critiques à des intervalles aléatoires (tels qu'une forte utilisation du CPU, des fuites de mémoire ou des pannes soudaines). Votre pile de surveillance doit vous permettre de détecter ces problèmes le plus rapidement possible et de diagnostiquer la cause profonde à l'aide des journaux et des métriques.
+Depuis ce dossier :
 
-## Fonctionnalités du Serveur pour le Cours
-1. **Métriques** : Le serveur exécute [`prometheus-flask-exporter`](https://github.com/rycus86/prometheus_flask_exporter/tree/0.23.2) quibind automatiquement une route `/metrics` sur le port 5000. Les étudiants peuvent extraire cela en utilisant Prometheus pour visualiser les temps de réponse HTTP, les taux de demande, les fréquences d'erreurs 4xx/5xx, etc.
-2. **Journaux** : Le serveur crée des journaux très détaillés (`server.log`) en utilisant différents niveaux de journalisation (`DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`).
-3. **Incidents Aléatoires** : En arrière-plan, un thread exécute un "simulateur de chaos" qui finira par faire tomber le serveur, nécessitant que les étudiants surveillent les journaux et les métriques pour découvrir exactement pourquoi l'application a cessé de répondre (par exemple, pic de CPU à 100 %, erreur de mémoire ou panne explicite).
+```bash
+cd /root/ELK/python_apps
+docker compose up --build -d
+```
 
-## Fonctionnalités du Client
-- Simule un trafic web réaliste.
-- Varie le taux de demande de manière aléatoire pour créer des pics de trafic intéressants dans Prometheus.
-- Crée `client.log`, qui suit la latence et les codes de statut HTTP, simulant la perspective de l'utilisateur final.
-
-## Structure du Projet
-- `server/server.py` : Une API Python construite avec Flask. L'application expose automatiquement un point d'accès `/metrics` pour Prometheus et écrit des journaux détaillés à plusieurs niveaux dans `server.log`.
-- `client/client.py` : Un client utilisateur simulé. Il consomme continuellement l'API, variant les taux de demande et générant des modèles de trafic réalistes. Il enregistre également les erreurs et la latence du point de vue de l'utilisateur dans `client.log`.
-- `requirements.txt` : Les dépendances Python requises pour exécuter cette application.
-
-## Instructions d'Installation
-
-### Option 1 : Exécuter avec Docker (Recommandé)
-C'est le moyen le plus rapide de démarrer l'application et de la brancher à ELK.
-
-1. Assurez-vous d'avoir **Docker** et **Docker Compose** installés.
-2. Depuis le dossier `python_apps`, lancez :
-   ```bash
-   docker compose up --build -d
-   ```
-
-Services disponibles :
+## Services exposes
 
 - API Flask : `http://localhost:8000`
-- Endpoint de métriques du serveur : `http://localhost:8000/metrics`
+- endpoint metriques : `http://localhost:8000/metrics`
 
-Les journaux sont écrits sur le disque dans :
+## Dossier de logs
+
+Les logs sont ecrits sur l'hote dans :
 
 ```text
 ../log_analysed/python_apps/
@@ -59,73 +41,70 @@ Fichiers attendus :
 - `server.log`
 - `client.log`
 
-Ces fichiers sont ensuite recuperes par la stack ELK principale via :
+## Integration avec ELK
+
+Le flux retenu est le suivant :
 
 ```text
-Filebeat -> Logstash -> Elasticsearch -> Kibana
+server/client
+  -> fichiers .log
+  -> Filebeat
+  -> Logstash
+  -> Elasticsearch
+  -> Kibana
 ```
-
----
-
-### Option 2 : Exécuter Localement
-Si vous préférez exécuter les scripts Python directement sur votre machine hôte.
-
-1. Installez les dépendances requises pour les deux composants :
-   ```bash
-   pip install -r server/requirements.txt
-   pip install -r client/requirements.txt
-   ```
-2. Dans votre premier terminal, démarrez le **Serveur API** :
-   ```bash
-   cd server
-   python server.py
-   ```
-   > **Note :** L'API sera disponible sur `http://localhost:5000` et les métriques seront exposées sur `http://localhost:5000/metrics`.
-
-3. Dans un deuxième terminal, démarrez le **Client** :
-   ```bash
-   cd client
-   python client.py
-   ```
-
----
-
-## Étapes Finales
-Une fois les services en cours d'exécution :
-1. Connectez votre pile d'observabilité (ElasticSearch / Logstash / Kibana / etc.).
-2. Surveillez les métriques et les journaux (`server.log` et `client.log`).
-3. Préparez-vous pour l'incident inévitable. Bonne chance !
-
-## Intégration retenue
-
-Le projet Docker inclut uniquement :
-
-- `server` : API Flask instable avec `/metrics`
-- `client` : génération continue de trafic
-
-En complément, les fichiers de logs sont stockés dans `../log_analysed/python_apps/` afin qu'ils puissent être lus par `Filebeat`, puis envoyés à `Logstash`, `Elasticsearch` et enfin visualisés dans `Kibana`.
 
 ## Ce qu'il faut surveiller
 
-### Dans Kibana / ELK
+Dans `server.log` :
 
-- activite du serveur dans `server.log`
-- activite du client dans `client.log`
-- niveaux `ERROR` et `CRITICAL`
-- événements `chaos_incident`
-- événements `system_alert`
+- activite normale de l'API
+- `ERROR`
+- `CRITICAL`
+- `INCIDENT INITIATED`
+- `SYSTEM ALERT`
+
+Dans `client.log` :
+
+- succes HTTP
+- erreurs HTTP
 - `TIMEOUT`
 - `CONNECTION FAILED`
 
-### Symptômes attendus
+## Symptomes possibles
 
 Le simulateur de chaos peut provoquer :
 
 - un pic CPU
-- une fuite mémoire
-- un crash brutal du serveur
+- une fuite memoire
+- un crash brutal
 
-L'objectif du TP est d'identifier le problème le plus vite possible en corrélant :
+## Utilisation dans Kibana
 
-- les logs applicatifs
-- le comportement du client
+Filtres KQL utiles :
+
+```text
+source_filename : "server.log"
+```
+
+```text
+source_filename : "client.log"
+```
+
+```text
+level : "ERROR" or level : "CRITICAL"
+```
+
+```text
+event_type : "chaos_incident" or event_type : "system_alert"
+```
+
+```text
+event_type : "client_connection_failed" or event_type : "client_timeout"
+```
+
+## Arret
+
+```bash
+docker compose down
+```

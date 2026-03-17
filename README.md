@@ -1,553 +1,263 @@
-# ELK avec Docker Compose
+# Consigne 2 - Logs dynamiques avec Filebeat et ELK
 
-Cette branche correspond a la `consigne 2` :
+Cette branche est dediee exclusivement a la `consigne 2`.
 
-- lancer `python_apps/server` et `python_apps/client`
-- ecrire des logs dynamiques dans `log_analysed/python_apps/`
+Objectif :
+
+- demarrer une application Python composee d'un `server` et d'un `client`
+- generer des logs dynamiques dans `log_analysed/python_apps/`
 - collecter ces logs avec `Filebeat`
-- les envoyer vers `Logstash`, `Elasticsearch` puis `Kibana`
+- les parser avec `Logstash`
+- les indexer dans `Elasticsearch`
+- les analyser dans `Kibana`
 
-La branche `main` reste la `consigne 1` :
-
-- analyser les logs statiques deja presents dans `log_analysed/`
-
-Ce projet fournit une stack **ELK** simple a demarrer en local avec Docker Compose.
-
-- **Elasticsearch** stocke et indexe les données
-- **Logstash** reçoit et transforme les logs
-- **Kibana** permet de rechercher et visualiser les événements
-
-L'objectif de cette branche est de reproduire un cas plus proche du reel :
-
-- une application ecrit des logs en continu
-- `Filebeat` surveille les fichiers
-- `Logstash` parse les lignes
-- `Elasticsearch` indexe
-- `Kibana` permet l'analyse
-
-Version Elastic utilisée par défaut :
-
-- `8.19.11`
+La branche `main` et la branche `consigne-1-log-analysed` restent reservees a la premiere consigne sur les logs statiques.
 
 ## Architecture
 
-Le projet démarre 3 conteneurs principaux :
-
-- `elasticsearch` sur le port `9200`
-- `logstash` sur les ports `5000` et `5044`
-- `filebeat` pour collecter les fichiers de logs
-- `kibana` sur le port `5601`
-
-### Schema d'architecture
-
 ```mermaid
 flowchart LR
-    U[Utilisateur] -->|Navigateur| K[Kibana<br/>localhost:5601]
-    U -->|API HTTP| E[Elasticsearch<br/>localhost:9200]
-    U -->|TCP JSON| L[Logstash<br/>localhost:5000]
+    U[Utilisateur] -->|API| API[API Flask<br/>localhost:8000]
+    U -->|Navigateur| K[Kibana<br/>localhost:5601]
 
-    subgraph HOST[Machine locale / Docker Compose]
-        LF[log_analysed/*.log]
-        FB[Filebeat]
-        LP[logstash/pipeline/logstash.conf]
-        ED[(Volume Docker<br/>esdata)]
-
-        LF -->|Lecture des fichiers .log| FB
-        FB -->|Envoi Beats 5044| L
-        LP -->|Pipeline de parsing| L
-        L -->|Indexation elk-demo-*| E
-        E -->|Recherche / agrégations| K
-        E --> ED
+    subgraph PY[python_apps]
+        S[server]
+        C[client]
     end
+
+    subgraph HOST[Machine locale]
+        LOGS[log_analysed/python_apps/*.log]
+    end
+
+    subgraph ELK[Stack observabilite]
+        FB[Filebeat]
+        L[Logstash<br/>5044 / 5000]
+        E[Elasticsearch<br/>9200]
+        K
+    end
+
+    C -->|HTTP| S
+    S -->|ecrit server.log| LOGS
+    C -->|ecrit client.log| LOGS
+    LOGS -->|lecture fichiers| FB
+    FB -->|Beats 5044| L
+    L -->|index elk-demo-*| E
+    E --> K
 ```
 
-### Lecture du schema
-
-1. Les logs applicatifs sont stockes dans `log_analysed/`
-2. Docker monte ce dossier dans le conteneur `filebeat`
-3. Filebeat lit les fichiers de logs et les envoie a Logstash
-4. Logstash parse les lignes et extrait les champs utiles
-5. Les evenements sont envoyes dans Elasticsearch dans les index `elk-demo-*`
-6. Kibana interroge Elasticsearch pour afficher les logs, filtres, tableaux et dashboards
-
-### Flux principal
-
-```text
-log_analysed/*.log
-   -> Filebeat
-   -> Logstash
-   -> Elasticsearch
-   -> Kibana
-```
-
-## Structure du projet
+## Ce que contient cette branche
 
 ```text
 .
 ├── docker-compose.yml
-├── filebeat
+├── filebeat/
 │   └── filebeat.yml
-├── logstash
-│   └── pipeline
+├── logstash/
+│   └── pipeline/
 │       └── logstash.conf
-├── logs
-│   └── app.log
-├── log_analysed
-│   ├── order_service.log
-│   ├── product_service.log
-│   └── user_service.log
-│   └── python_apps
-│       ├── client.log
-│       └── server.log
-├── python_apps
+├── log_analysed/
+│   └── python_apps/
+├── python_apps/
 │   ├── docker-compose.yml
-│   ├── server
-│   └── client
-├── images
-│   ├── Welcome.png
-│   ├── data_views.png
-│   ├── Discover.png
-│   └── dashboard.png
+│   ├── server/
+│   ├── client/
+│   └── README_fr-FR.md
 └── README.md
 ```
 
-## Prérequis
+## Prerequis
 
-- Docker installé
-- Docker Compose disponible via `docker compose`
-- Au moins 4 Go de RAM alloués à Docker
+- Docker
+- Docker Compose via `docker compose`
 
-Vérification rapide :
+Verification rapide :
 
 ```bash
 docker --version
 docker compose version
 ```
 
-## Fichiers importants
+## Ports utilises
 
-### `docker-compose.yml`
+- `8000` : API Flask exposee en local
+- `9200` : Elasticsearch
+- `5601` : Kibana
+- `5044` : entree Beats de Logstash
+- `5000` : entree TCP JSON optionnelle de Logstash
 
-Déclare les 3 services ELK :
-
-- Elasticsearch en mode `single-node`
-- Logstash avec la pipeline de parsing
-- Filebeat pour collecter les fichiers `.log`
-- Kibana connecté à Elasticsearch
-
-Reglages Elasticsearch utilises dans la stack :
-
-- `discovery.type=single-node`
-  Pas de cluster, un seul noeud Elasticsearch pour le TP
-- `xpack.security.enabled=false`
-  Securite desactivee pour simplifier les tests en local
-- `ES_JAVA_OPTS="-Xms512m -Xmx512m"`
-  Limitation memoire a 512 Mo pour reduire la consommation RAM
-
-### `logstash/pipeline/logstash.conf`
-
-Cette pipeline :
-
-- lit tous les fichiers `*.log` du dossier `/var/log/demo`
-- écoute aussi sur le port TCP `5000` au format JSON
-- envoie tout dans l'index `elk-demo-YYYY.MM.dd`
-
-### `log_analysed/`
-
-Dossier principal des logs.
-
-Dans `main`, il contient surtout les logs statiques a analyser :
-
-- `user_service.log`
-- `product_service.log`
-- `order_service.log`
-
-Dans cette branche, il contient aussi les logs dynamiques produits par `python_apps` :
-
-- `python_apps/server.log`
-- `python_apps/client.log`
-
-La pipeline Logstash extrait automatiquement plusieurs champs utiles :
-
-- `service`
-- `level`
-- `event_type`
-- `http_method`
-- `url_path`
-- `status_code`
-- `user_id`
-- `user_name`
-- `order_id`
-- `product_name`
-
-## Démarrage du projet
+## Demarrage
 
 ### 1. Demarrer la stack ELK
 
-Place-toi dans le dossier du projet :
+Depuis la racine du projet :
 
 ```bash
 cd /root/ELK
-```
-
-Démarre la stack :
-
-```bash
 docker compose up -d
 ```
 
-Vérifie l'état des conteneurs :
+Verifier l'etat :
 
 ```bash
 docker compose ps
 ```
 
-Consulte les logs si besoin :
+### 2. Demarrer l'application Python
 
-```bash
-docker compose logs -f
-```
-
-### 2. Demarrer l'application dynamique
-
-Dans un autre terminal :
+Dans un second terminal :
 
 ```bash
 cd /root/ELK/python_apps
 docker compose up --build -d
 ```
 
-Services disponibles :
-
-- API Flask : `http://localhost:8000`
-- endpoint metriques du serveur : `http://localhost:8000/metrics`
-
-Fichiers produits :
-
-- `log_analysed/python_apps/server.log`
-- `log_analysed/python_apps/client.log`
-
-## Vérifier que tout fonctionne
-
-### Elasticsearch
-
-Ouvre dans ton navigateur :
-
-```text
-http://localhost:9200
-```
-
-Ou teste dans le terminal :
-
-```bash
-curl http://localhost:9200
-```
-
-Si tout va bien, tu verras un JSON avec le nom du nœud, la version et le cluster.
-
-### Kibana
-
-Ouvre :
-
-```text
-http://localhost:5601
-```
-
-Kibana peut mettre 30 à 90 secondes à être complètement prêt après le démarrage.
-
-### Logstash
-
-Important : `http://localhost:5000` ne doit pas être ouvert dans un navigateur.
-
-Le port `5000` n'est pas une interface web. C'est une **entrée TCP** utilisée par Logstash pour recevoir des événements JSON.
-
-## Captures d'ecran
-
-Quelques captures du projet sont incluses dans le depot :
-
-### Page d'accueil Kibana
-
-![Accueil Kibana](images/Welcome.png)
-
-### Data View creee pour les logs
-
-![Data View](images/data_views.png)
-
-### Exploration des logs dans Discover
-
-![Discover](images/Discover.png)
-
-### Dashboard de visualisation
-
-![Dashboard](images/dashboard.png)
-
-## Comment utiliser la stack
-
-### Cas 1. Lire les logs de `log_analysed`
-
-Le dossier local `./log_analysed` est monté dans le conteneur Logstash.
-
-Tous les fichiers avec l'extension `.log` sont lus automatiquement.
-
-Ces événements seront envoyés dans Elasticsearch dans un index de type :
-
-```text
-elk-demo-2026.03.16
-```
-
-Ce que Logstash détecte dans ces fichiers :
-
-- les créations d'utilisateurs
-- les créations de commandes
-- les requêtes HTTP `GET` et `POST`
-- les codes de statut `200` et `201`
-- les messages de démarrage des services
-
-### Cas 2. Envoyer un événement JSON à Logstash
-
-Tu peux aussi injecter des événements en direct via le port TCP `5000`.
-
-Exemple :
-
-```bash
-printf '{"service":"api","level":"info","message":"hello from tcp"}\n' | nc localhost 5000
-```
-
-Autre exemple :
-
-```bash
-printf '{"service":"billing","level":"error","message":"payment failed","user_id":42}\n' | nc localhost 5000
-```
-
-## Afficher les logs dans Kibana
-
-Une fois Kibana disponible :
-
-1. Ouvre `http://localhost:5601`
-2. Va dans `Stack Management`
-3. Ouvre `Data Views`
-4. Clique sur `Create data view`
-5. Saisis le pattern :
-
-```text
-elk-demo-*
-```
-
-6. Choisis `@timestamp` comme champ temporel si Kibana le propose
-7. Ouvre ensuite `Discover`
-
-Tu verras les événements ingérés par Logstash.
-
-## Analyse conseillée pour la consigne
-
-Une fois les logs chargés dans Kibana, tu peux faire cette analyse.
-
-### 1. Vérifier les services présents
-
-Dans `Discover`, filtre sur le champ `service`.
-
-Tu devrais retrouver :
-
-- `user_service`
-- `product_service`
-- `order_service`
-
-### 2. Compter les événements par type
-
-Regarde le champ `event_type` pour distinguer :
-
-- `user_created`
-- `order_created`
-- `business_request`
-- `http_access`
-- `startup_info`
-- `startup_warning`
-
-### 3. Analyser les utilisateurs créés
-
-Filtre :
-
-```text
-event_type : "user_created"
-```
-
-Champs intéressants :
-
-- `user_id`
-- `user_name`
-- `service`
-- `@timestamp`
-
-### 4. Analyser les commandes créées
-
-Filtre :
-
-```text
-event_type : "order_created"
-```
-
-Champs intéressants :
-
-- `order_id`
-- `user_id`
-- `product_name`
-- `service`
-
-### 5. Analyser les accès HTTP
-
-Filtre :
-
-```text
-event_type : "http_access"
-```
-
-Tu peux ensuite regarder :
-
-- `http_method`
-- `url_path`
-- `status_code`
-- `client_ip`
-
-### 6. Faire des visualisations utiles
-
-Dans `Visualize` ou `Lens`, je te conseille :
-
-- un camembert par `service`
-- un histogramme par `event_type`
-- un tableau des `product_name` les plus commandés
-- un tableau des `user_name` les plus fréquents
-- une répartition des `status_code`
-
-## Scénario de test complet
-
-Voici un test simple du début à la fin :
-
-1. Démarrer la stack
-
-```bash
-docker compose up -d
-```
-
-2. Vérifier que les fichiers de `log_analysed/` sont présents
-
-```bash
-ls log_analysed
-```
-
-3. Ouvrir Kibana
-
-```text
-http://localhost:5601
-```
-
-4. Créer la data view `elk-demo-*`
-
-5. Aller dans `Discover` et rafraîchir
-
-Tu devrais alors voir les événements des trois services apparaître.
-
-## Commandes utiles
-
-Démarrer :
-
-```bash
-docker compose up -d
-```
-
-Arrêter :
-
-```bash
-docker compose down
-```
-
-Supprimer aussi les volumes :
-
-```bash
-docker compose down -v
-```
-
-Voir les logs des conteneurs :
-
-```bash
-docker compose logs -f
-```
-
-Redémarrer la stack :
-
-```bash
-docker compose restart
-```
-
-Reconstruire proprement :
-
-```bash
-docker compose down -v
-docker compose up -d
-```
-
-## Dépannage
-
-### Kibana ne s'ouvre pas
-
-Attends un peu après le `docker compose up -d`, puis vérifie :
+Verifier l'etat :
 
 ```bash
 docker compose ps
-docker compose logs kibana
 ```
 
-### Elasticsearch répond mais pas Kibana
+## Flux de logs
 
-C'est fréquent au démarrage. Elasticsearch est souvent prêt avant Kibana.
+1. `python_apps/server` ecrit `server.log`
+2. `python_apps/client` ecrit `client.log`
+3. les fichiers sont stockes sur l'hote dans `log_analysed/python_apps/`
+4. `Filebeat` surveille ces fichiers
+5. `Filebeat` envoie les nouvelles lignes a `Logstash`
+6. `Logstash` extrait les champs utiles
+7. `Elasticsearch` stocke les evenements
+8. `Kibana` permet la recherche et l'analyse
 
-### `localhost:5000` ne montre rien dans le navigateur
+## Fichiers de logs attendus
 
-C'est normal.
+Les logs dynamiques sont ecrits ici :
 
-Le port `5000` n'est pas un site web. Il sert uniquement à recevoir des données TCP pour Logstash.
+```text
+log_analysed/python_apps/server.log
+log_analysed/python_apps/client.log
+```
 
-### Les nouveaux logs n'apparaissent pas
+## Champs extraits dans ELK
 
-Vérifie :
+La pipeline parse notamment :
+
+- `level`
+- `log_detail`
+- `source_filename`
+- `trace_id`
+- `span_id`
+- `logger_name`
+- `status_code`
+- `url_path`
+- `request_latency_seconds`
+- `event_type`
+
+## Evenements utiles dans Kibana
+
+Filtres KQL recommandes :
+
+```text
+source_filename : "server.log"
+```
+
+```text
+source_filename : "client.log"
+```
+
+```text
+level : "ERROR" or level : "CRITICAL"
+```
+
+```text
+event_type : "chaos_incident" or event_type : "system_alert"
+```
+
+```text
+event_type : "client_connection_failed" or event_type : "client_timeout"
+```
+
+## Verification rapide
+
+### API Flask
+
+```text
+http://localhost:8000
+```
+
+### Kibana
+
+```text
+http://localhost:5601
+```
+
+Dans Kibana :
+
+1. ouvrir `Discover`
+2. selectionner la Data View `demo`
+3. choisir une plage large comme `Last 24 hours`
+4. filtrer sur `server.log` ou `client.log`
+
+## Refaire l'environnement plus tard
+
+### Relancer uniquement ELK
 
 ```bash
-docker compose logs logstash
+cd /root/ELK
+docker compose up -d
 ```
 
-Puis vérifie que `log_analysed/` est bien monté et que Logstash lit les bons fichiers :
+### Relancer uniquement l'application
 
 ```bash
-docker compose exec logstash ls /var/log/analysed
+cd /root/ELK/python_apps
+docker compose up --build -d
 ```
 
-### Plus assez de mémoire
+### Tout arreter
 
-Si Docker manque de RAM, Elasticsearch ou Kibana peuvent démarrer lentement ou planter.
+```bash
+cd /root/ELK/python_apps
+docker compose down
 
-Dans ce cas, augmente la mémoire allouée à Docker Desktop ou ajuste les options Java dans `docker-compose.yml`.
+cd /root/ELK
+docker compose down
+```
 
-## Limites de cette configuration
+### Repartir proprement
 
-Cette stack est pensée pour le local et la démonstration.
+```bash
+cd /root/ELK/python_apps
+docker compose down
 
-- la sécurité Elasticsearch est désactivée
-- il n'y a pas d'authentification
-- il n'y a pas de persistance avancée ni de tuning production
+cd /root/ELK
+docker compose down
+docker compose up -d
 
-Pour un usage de production, il faut ajouter :
+cd /root/ELK/python_apps
+docker compose up --build -d
+```
 
-- sécurité et gestion des mots de passe
-- certificats TLS
-- monitoring
-- sauvegardes
-- réglages mémoire et disque
+## Incident attendu
 
-## Résumé
+Le `server` contient un simulateur de chaos.
 
-Pour utiliser ce projet :
+Il peut provoquer :
 
-1. lance `docker compose up -d`
-2. ouvre `http://localhost:5601`
-3. crée la data view `elk-demo-*`
-4. vérifie les champs extraits dans `Discover`
-5. analyse les événements par service et par type
+- un pic CPU
+- une fuite memoire
+- un crash brutal
+
+Les symptomes visibles dans Kibana sont en general :
+
+- `ERROR` et `CRITICAL` dans `server.log`
+- `chaos_incident`
+- `system_alert`
+- `CONNECTION FAILED` dans `client.log`
+
+## Fichiers importants
+
+- [docker-compose.yml](/root/ELK/docker-compose.yml)
+- [filebeat.yml](/root/ELK/filebeat/filebeat.yml)
+- [logstash.conf](/root/ELK/logstash/pipeline/logstash.conf)
+- [python_apps/docker-compose.yml](/root/ELK/python_apps/docker-compose.yml)
+- [python_apps/README_fr-FR.md](/root/ELK/python_apps/README_fr-FR.md)
