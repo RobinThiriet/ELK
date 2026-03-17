@@ -1,87 +1,64 @@
-# Consigne 2 - Application Python a observer avec ELK
+# Consigne 3 - python_apps avec un Filebeat par service
 
-Ce dossier contient l'application utilisee pour la `consigne 2`.
+Ce dossier contient la variante la plus proche d'un cas reel pour le TP.
 
-But :
+Principe :
 
-- lancer un serveur Flask instable
-- lancer un client qui genere du trafic
-- produire des logs dynamiques
-- envoyer ces logs vers la stack ELK principale grace a `Filebeat`
+- le `server` ecrit ses logs dans son propre dossier
+- le `client` ecrit ses logs dans son propre dossier
+- `filebeat-server` collecte uniquement les logs du serveur
+- `filebeat-client` collecte uniquement les logs du client
+- les deux envoient les evenements vers la stack ELK principale
 
-## Composants
+## Services
 
-- `server` : API Flask instable avec simulateur de chaos
-- `client` : trafic HTTP continu vers le serveur
+- `server`
+- `client`
+- `filebeat-server`
+- `filebeat-client`
 
 ## Lancement
-
-Depuis ce dossier :
 
 ```bash
 cd /root/ELK/python_apps
 docker compose up --build -d
 ```
 
-## Services exposes
+## Logs produits
 
-- API Flask : `http://localhost:8000`
-- endpoint metriques : `http://localhost:8000/metrics`
+- `python_apps/runtime_logs/server/server.log`
+- `python_apps/runtime_logs/client/client.log`
 
-## Dossier de logs
+## Collecte
 
-Les logs sont ecrits sur l'hote dans :
+### Filebeat serveur
+
+- configuration : `python_apps/filebeat/server-filebeat.yml`
+- lit : `python_apps/runtime_logs/server/*.log`
+
+### Filebeat client
+
+- configuration : `python_apps/filebeat/client-filebeat.yml`
+- lit : `python_apps/runtime_logs/client/*.log`
+
+## Destination
+
+Les deux collecteurs envoient vers :
 
 ```text
-../log_analysed/python_apps/
+logstash:5044
 ```
 
-Fichiers attendus :
+sur le reseau partage `elk-observability`.
 
-- `server.log`
-- `client.log`
+## Pourquoi cette approche
 
-## Integration avec ELK
+- on se rapproche d'un fonctionnement reel
+- chaque service garde ses logs localement
+- chaque source a son propre collecteur
+- on peut faire evoluer les deux collecteurs separement
 
-Le flux retenu est le suivant :
-
-```text
-server/client
-  -> fichiers .log
-  -> Filebeat
-  -> Logstash
-  -> Elasticsearch
-  -> Kibana
-```
-
-## Ce qu'il faut surveiller
-
-Dans `server.log` :
-
-- activite normale de l'API
-- `ERROR`
-- `CRITICAL`
-- `INCIDENT INITIATED`
-- `SYSTEM ALERT`
-
-Dans `client.log` :
-
-- succes HTTP
-- erreurs HTTP
-- `TIMEOUT`
-- `CONNECTION FAILED`
-
-## Symptomes possibles
-
-Le simulateur de chaos peut provoquer :
-
-- un pic CPU
-- une fuite memoire
-- un crash brutal
-
-## Utilisation dans Kibana
-
-Filtres KQL utiles :
+## Ce qu'il faut surveiller dans Kibana
 
 ```text
 source_filename : "server.log"

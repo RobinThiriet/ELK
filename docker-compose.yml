@@ -32,19 +32,11 @@ services:
       - "5000:5000"
     volumes:
       - ./logstash/pipeline:/usr/share/logstash/pipeline:ro
-
-  filebeat:
-    image: docker.elastic.co/beats/filebeat:${STACK_VERSION:-8.19.11}
-    container_name: elk-filebeat
-    user: root
-    depends_on:
-      - logstash
-    command: ["filebeat", "-e", "--strict.perms=false"]
-    volumes:
-      - ./filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
-      - ./logs:/var/log/demo:ro
-      - ./log_analysed:/var/log/analysed:ro
-      - filebeatdata:/usr/share/filebeat/data
+    networks:
+      default:
+      observability:
+        aliases:
+          - logstash
 
   kibana:
     image: docker.elastic.co/kibana/kibana:${STACK_VERSION:-8.19.11}
@@ -59,4 +51,7 @@ services:
 
 volumes:
   esdata:
-  filebeatdata:
+
+networks:
+  observability:
+    name: elk-observability

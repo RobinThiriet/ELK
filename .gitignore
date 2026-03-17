@@ -6,4 +6,5 @@ __pycache__/
 *.tmp
 *.swp
 .env
-log_analysed/python_apps/*.log
+python_apps/runtime_logs/
+log_analysed/python_apps/

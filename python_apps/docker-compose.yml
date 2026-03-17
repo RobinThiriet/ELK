@@ -9,7 +9,9 @@ services:
     ports:
       - "8000:5000"
     volumes:
-      - ../log_analysed/python_apps:/app/logs
+      - ./runtime_logs/server:/app/logs
+    networks:
+      - default
 
   client:
     build:
@@ -22,4 +24,45 @@ services:
     depends_on:
       - server
     volumes:
-      - ../log_analysed/python_apps:/app/logs
+      - ./runtime_logs/client:/app/logs
+    networks:
+      - default
+
+  filebeat-server:
+    image: docker.elastic.co/beats/filebeat:${STACK_VERSION:-8.19.11}
+    container_name: chaos-filebeat-server
+    user: root
+    depends_on:
+      - server
+    command: ["filebeat", "-e", "--strict.perms=false"]
+    volumes:
+      - ./filebeat/server-filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+      - ./runtime_logs/server:/srv/logs:ro
+      - filebeat_server_data:/usr/share/filebeat/data
+    networks:
+      - default
+      - observability
+
+  filebeat-client:
+    image: docker.elastic.co/beats/filebeat:${STACK_VERSION:-8.19.11}
+    container_name: chaos-filebeat-client
+    user: root
+    depends_on:
+      - client
+    command: ["filebeat", "-e", "--strict.perms=false"]
+    volumes:
+      - ./filebeat/client-filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+      - ./runtime_logs/client:/srv/logs:ro
+      - filebeat_client_data:/usr/share/filebeat/data
+    networks:
+      - default
+      - observability
+
+volumes:
+  filebeat_server_data:
+  filebeat_client_data:
+
+networks:
+  observability:
+    external: true
+    name: elk-observability

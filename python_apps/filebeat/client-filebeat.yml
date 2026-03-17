@@ -1,11 +1,13 @@
 filebeat.inputs:
   - type: filestream
-    id: elk-local-logs
+    id: python-client-logs
     enabled: true
     paths:
-      - /var/log/demo/*.log
-      - /var/log/analysed/*.log
-      - /var/log/analysed/*/*.log
+      - /srv/logs/*.log
+    fields:
+      collector_role: client
+      source_service: client
+    fields_under_root: true
 
 processors:
   - add_host_metadata: ~

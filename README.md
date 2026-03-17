@@ -1,17 +1,20 @@
-# Consigne 2 - Logs dynamiques avec Filebeat et ELK
+# Consigne 3 - Un Filebeat par service
 
-Cette branche est dediee exclusivement a la `consigne 2`.
+Cette branche est dediee a une variante plus proche d'un cas reel :
 
-Objectif :
+- le `server` ecrit ses logs dans son propre dossier
+- le `client` ecrit ses logs dans son propre dossier
+- chaque service a son propre `Filebeat`
+- les deux `Filebeat` envoient ensuite les logs a `Logstash`
+- `Logstash` alimente `Elasticsearch`
+- `Kibana` sert a l'analyse
 
-- demarrer une application Python composee d'un `server` et d'un `client`
-- generer des logs dynamiques dans `log_analysed/python_apps/`
-- collecter ces logs avec `Filebeat`
-- les parser avec `Logstash`
-- les indexer dans `Elasticsearch`
-- les analyser dans `Kibana`
+Cette branche ne remplace pas les autres :
 
-La branche `main` et la branche `consigne-1-log-analysed` restent reservees a la premiere consigne sur les logs statiques.
+- `main` : branche de reference
+- `consigne-1-log-analysed` : logs statiques dans `log_analysed/`
+- `consigne-2-python-apps-filebeat` : logs dynamiques centralises dans un dossier partage
+- `consigne-3-filebeat-par-service` : logs dynamiques avec un collecteur par service
 
 ## Architecture
 
@@ -20,45 +23,62 @@ flowchart LR
     U[Utilisateur] -->|API| API[API Flask<br/>localhost:8000]
     U -->|Navigateur| K[Kibana<br/>localhost:5601]
 
-    subgraph PY[python_apps]
+    subgraph APPS[python_apps]
         S[server]
         C[client]
+        SL[python_apps/runtime_logs/server/server.log]
+        CL[python_apps/runtime_logs/client/client.log]
+        FBS[Filebeat server]
+        FBC[Filebeat client]
+
+        S --> SL
+        C --> CL
+        SL --> FBS
+        CL --> FBC
     end
 
-    subgraph HOST[Machine locale]
-        LOGS[log_analysed/python_apps/*.log]
-    end
-
-    subgraph ELK[Stack observabilite]
-        FB[Filebeat]
-        L[Logstash<br/>5044 / 5000]
+    subgraph ELK[Stack ELK]
+        L[Logstash<br/>5044]
         E[Elasticsearch<br/>9200]
         K
     end
 
     C -->|HTTP| S
-    S -->|ecrit server.log| LOGS
-    C -->|ecrit client.log| LOGS
-    LOGS -->|lecture fichiers| FB
-    FB -->|Beats 5044| L
-    L -->|index elk-demo-*| E
+    FBS -->|Beats| L
+    FBC -->|Beats| L
+    L --> E
     E --> K
 ```
 
-## Ce que contient cette branche
+## Principe
+
+Ici, on evite le dossier central `log_analysed/python_apps/`.
+
+A la place :
+
+- `server` ecrit dans `python_apps/runtime_logs/server/`
+- `client` ecrit dans `python_apps/runtime_logs/client/`
+- `filebeat-server` lit uniquement les logs du serveur
+- `filebeat-client` lit uniquement les logs du client
+
+Ce modele ressemble davantage a un environnement reel ou chaque machine ou service collecte ses propres logs localement avant de les envoyer a la plateforme d'observabilite.
+
+## Contenu de la branche
 
 ```text
 .
 ├── docker-compose.yml
-├── filebeat/
-│   └── filebeat.yml
 ├── logstash/
 │   └── pipeline/
 │       └── logstash.conf
-├── log_analysed/
-│   └── python_apps/
 ├── python_apps/
 │   ├── docker-compose.yml
+│   ├── filebeat/
+│   │   ├── server-filebeat.yml
+│   │   └── client-filebeat.yml
+│   ├── runtime_logs/
+│   │   ├── server/
+│   │   └── client/
 │   ├── server/
 │   ├── client/
 │   └── README_fr-FR.md
@@ -70,16 +90,9 @@ flowchart LR
 - Docker
 - Docker Compose via `docker compose`
 
-Verification rapide :
+## Ports
 
-```bash
-docker --version
-docker compose version
-```
-
-## Ports utilises
-
-- `8000` : API Flask exposee en local
+- `8000` : API Flask exposee localement
 - `9200` : Elasticsearch
 - `5601` : Kibana
 - `5044` : entree Beats de Logstash
@@ -87,74 +100,53 @@ docker compose version
 
 ## Demarrage
 
-### 1. Demarrer la stack ELK
-
-Depuis la racine du projet :
+### 1. Demarrer ELK
 
 ```bash
 cd /root/ELK
 docker compose up -d
 ```
 
-Verifier l'etat :
-
-```bash
-docker compose ps
-```
-
-### 2. Demarrer l'application Python
-
-Dans un second terminal :
+### 2. Demarrer l'application et les collecteurs
 
 ```bash
 cd /root/ELK/python_apps
 docker compose up --build -d
 ```
 
-Verifier l'etat :
+## Fonctionnement
 
-```bash
-docker compose ps
-```
+1. `server` ecrit `server.log` dans `python_apps/runtime_logs/server/`
+2. `client` ecrit `client.log` dans `python_apps/runtime_logs/client/`
+3. `filebeat-server` lit uniquement `/srv/logs/*.log` monte depuis `runtime_logs/server/`
+4. `filebeat-client` lit uniquement `/srv/logs/*.log` monte depuis `runtime_logs/client/`
+5. les deux envoient vers `logstash:5044`
+6. `Logstash` parse les lignes et enrichit les evenements
+7. `Elasticsearch` les indexe
+8. `Kibana` permet de les rechercher
 
-## Flux de logs
+## Avantages de cette approche
 
-1. `python_apps/server` ecrit `server.log`
-2. `python_apps/client` ecrit `client.log`
-3. les fichiers sont stockes sur l'hote dans `log_analysed/python_apps/`
-4. `Filebeat` surveille ces fichiers
-5. `Filebeat` envoie les nouvelles lignes a `Logstash`
-6. `Logstash` extrait les champs utiles
-7. `Elasticsearch` stocke les evenements
-8. `Kibana` permet la recherche et l'analyse
+- separation claire entre les sources de logs
+- plus proche d'un deploiement reel
+- plus simple a raisonner quand on ajoute d'autres services
+- chaque collecteur peut etre configure independamment
 
-## Fichiers de logs attendus
+## Verification
 
-Les logs dynamiques sont ecrits ici :
+### API
 
 ```text
-log_analysed/python_apps/server.log
-log_analysed/python_apps/client.log
+http://localhost:8000
 ```
 
-## Champs extraits dans ELK
+### Kibana
 
-La pipeline parse notamment :
+```text
+http://localhost:5601
+```
 
-- `level`
-- `log_detail`
-- `source_filename`
-- `trace_id`
-- `span_id`
-- `logger_name`
-- `status_code`
-- `url_path`
-- `request_latency_seconds`
-- `event_type`
-
-## Evenements utiles dans Kibana
-
-Filtres KQL recommandes :
+Dans `Discover`, utilise la Data View `demo`, puis filtre par exemple :
 
 ```text
 source_filename : "server.log"
@@ -176,39 +168,14 @@ event_type : "chaos_incident" or event_type : "system_alert"
 event_type : "client_connection_failed" or event_type : "client_timeout"
 ```
 
-## Verification rapide
+## Reconstruction rapide
 
-### API Flask
-
-```text
-http://localhost:8000
-```
-
-### Kibana
-
-```text
-http://localhost:5601
-```
-
-Dans Kibana :
-
-1. ouvrir `Discover`
-2. selectionner la Data View `demo`
-3. choisir une plage large comme `Last 24 hours`
-4. filtrer sur `server.log` ou `client.log`
-
-## Refaire l'environnement plus tard
-
-### Relancer uniquement ELK
+### Tout lancer
 
 ```bash
 cd /root/ELK
 docker compose up -d
-```
 
-### Relancer uniquement l'application
-
-```bash
 cd /root/ELK/python_apps
 docker compose up --build -d
 ```
@@ -237,27 +204,11 @@ cd /root/ELK/python_apps
 docker compose up --build -d
 ```
 
-## Incident attendu
-
-Le `server` contient un simulateur de chaos.
-
-Il peut provoquer :
-
-- un pic CPU
-- une fuite memoire
-- un crash brutal
-
-Les symptomes visibles dans Kibana sont en general :
-
-- `ERROR` et `CRITICAL` dans `server.log`
-- `chaos_incident`
-- `system_alert`
-- `CONNECTION FAILED` dans `client.log`
-
 ## Fichiers importants
 
 - [docker-compose.yml](/root/ELK/docker-compose.yml)
-- [filebeat.yml](/root/ELK/filebeat/filebeat.yml)
 - [logstash.conf](/root/ELK/logstash/pipeline/logstash.conf)
 - [python_apps/docker-compose.yml](/root/ELK/python_apps/docker-compose.yml)
-- [python_apps/README_fr-FR.md](/root/ELK/python_apps/README_fr-FR.md)
+- [server-filebeat.yml](/root/ELK/python_apps/filebeat/server-filebeat.yml)
+- [client-filebeat.yml](/root/ELK/python_apps/filebeat/client-filebeat.yml)
+- [README_fr-FR.md](/root/ELK/python_apps/README_fr-FR.md)
