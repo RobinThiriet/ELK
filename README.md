@@ -1,12 +1,29 @@
 # ELK avec Docker Compose
 
-Ce projet fournit une stack **ELK** simple à démarrer en local avec Docker Compose.
+Cette branche correspond a la `consigne 2` :
+
+- lancer `python_apps/server` et `python_apps/client`
+- ecrire des logs dynamiques dans `log_analysed/python_apps/`
+- collecter ces logs avec `Filebeat`
+- les envoyer vers `Logstash`, `Elasticsearch` puis `Kibana`
+
+La branche `main` reste la `consigne 1` :
+
+- analyser les logs statiques deja presents dans `log_analysed/`
+
+Ce projet fournit une stack **ELK** simple a demarrer en local avec Docker Compose.
 
 - **Elasticsearch** stocke et indexe les données
 - **Logstash** reçoit et transforme les logs
 - **Kibana** permet de rechercher et visualiser les événements
 
-L'objectif est d'avoir un environnement prêt pour apprendre ELK, faire des tests locaux, ou démarrer une petite démo rapidement.
+L'objectif de cette branche est de reproduire un cas plus proche du reel :
+
+- une application ecrit des logs en continu
+- `Filebeat` surveille les fichiers
+- `Logstash` parse les lignes
+- `Elasticsearch` indexe
+- `Kibana` permet l'analyse
 
 Version Elastic utilisée par défaut :
 
@@ -68,6 +85,8 @@ log_analysed/*.log
 ```text
 .
 ├── docker-compose.yml
+├── filebeat
+│   └── filebeat.yml
 ├── logstash
 │   └── pipeline
 │       └── logstash.conf
@@ -77,6 +96,13 @@ log_analysed/*.log
 │   ├── order_service.log
 │   ├── product_service.log
 │   └── user_service.log
+│   └── python_apps
+│       ├── client.log
+│       └── server.log
+├── python_apps
+│   ├── docker-compose.yml
+│   ├── server
+│   └── client
 ├── images
 │   ├── Welcome.png
 │   ├── data_views.png
@@ -128,13 +154,18 @@ Cette pipeline :
 
 ### `log_analysed/`
 
-Dossier principal pour la consigne.
+Dossier principal des logs.
 
-Il contient les logs à analyser :
+Dans `main`, il contient surtout les logs statiques a analyser :
 
 - `user_service.log`
 - `product_service.log`
 - `order_service.log`
+
+Dans cette branche, il contient aussi les logs dynamiques produits par `python_apps` :
+
+- `python_apps/server.log`
+- `python_apps/client.log`
 
 La pipeline Logstash extrait automatiquement plusieurs champs utiles :
 
@@ -150,6 +181,8 @@ La pipeline Logstash extrait automatiquement plusieurs champs utiles :
 - `product_name`
 
 ## Démarrage du projet
+
+### 1. Demarrer la stack ELK
 
 Place-toi dans le dossier du projet :
 
@@ -174,6 +207,25 @@ Consulte les logs si besoin :
 ```bash
 docker compose logs -f
 ```
+
+### 2. Demarrer l'application dynamique
+
+Dans un autre terminal :
+
+```bash
+cd /root/ELK/python_apps
+docker compose up --build -d
+```
+
+Services disponibles :
+
+- API Flask : `http://localhost:8000`
+- endpoint metriques du serveur : `http://localhost:8000/metrics`
+
+Fichiers produits :
+
+- `log_analysed/python_apps/server.log`
+- `log_analysed/python_apps/client.log`
 
 ## Vérifier que tout fonctionne
 

@@ -1,5 +1,13 @@
 # Observabilité des systèmes - Projet
 
+Cette partie correspond a la `consigne 2` du projet :
+
+- demarrer un serveur Flask instable
+- demarrer un client qui genere du trafic
+- produire des logs dynamiques
+- faire collecter ces logs par `Filebeat`
+- analyser le tout dans la stack ELK principale
+
 Bienvenue dans le projet en Observabilité des systèmes !
 
 Dans ce README, vous trouverez un environnement d'application mock Python/Flask conçu pour tester vos compétences en matière d'observabilité et de surveillance.
