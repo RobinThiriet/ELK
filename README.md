@@ -87,6 +87,36 @@ Verifier l'etat :
 docker compose ps
 ```
 
+## Utilisation avec Make
+
+Depuis la racine du projet :
+
+```bash
+cd /root/ELK
+make help
+```
+
+Pour cette consigne, la commande recommandee est :
+
+```bash
+make consigne1
+```
+
+Autres commandes utiles :
+
+```bash
+make status
+make clean
+make prune
+```
+
+Comportement :
+
+- `make consigne1` bascule sur la branche `consigne-1-log-analysed` puis demarre ELK
+- `make clean` arrete et supprime proprement les conteneurs et reseaux du projet
+- `make prune` ajoute la suppression des volumes dedies et des logs generes
+- `make status` affiche la branche courante et l'etat des services
+
 ## Flux de donnees
 
 1. `Logstash` lit directement les fichiers du dossier `log_analysed/`
