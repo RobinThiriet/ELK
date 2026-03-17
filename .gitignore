@@ -4,3 +4,5 @@
 *.tmp
 *.swp
 .env
+python_apps/
+log_analysed/python_apps/
