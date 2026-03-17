@@ -1,0 +1,14 @@
+filebeat.inputs:
+  - type: filestream
+    id: elk-local-logs
+    enabled: true
+    paths:
+      - /var/log/demo/*.log
+      - /var/log/analysed/*.log
+      - /var/log/analysed/*/*.log
+
+processors:
+  - add_host_metadata: ~
+
+output.logstash:
+  hosts: ["logstash:5044"]

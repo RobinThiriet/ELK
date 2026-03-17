@@ -1,0 +1,25 @@
+services:
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: chaos-api-server
+    environment:
+      - LOG_DIR=/app/logs
+    ports:
+      - "8000:5000"
+    volumes:
+      - ../log_analysed/python_apps:/app/logs
+
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: chaos-api-client
+    environment:
+      - SERVER_URL=http://server:5000
+      - LOG_DIR=/app/logs
+    depends_on:
+      - server
+    volumes:
+      - ../log_analysed/python_apps:/app/logs

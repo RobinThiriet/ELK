@@ -18,6 +18,7 @@ Le projet démarre 3 conteneurs principaux :
 
 - `elasticsearch` sur le port `9200`
 - `logstash` sur les ports `5000` et `5044`
+- `filebeat` pour collecter les fichiers de logs
 - `kibana` sur le port `5601`
 
 ### Schema d'architecture
@@ -30,10 +31,12 @@ flowchart LR
 
     subgraph HOST[Machine locale / Docker Compose]
         LF[log_analysed/*.log]
+        FB[Filebeat]
         LP[logstash/pipeline/logstash.conf]
         ED[(Volume Docker<br/>esdata)]
 
-        LF -->|Lecture des fichiers .log| L
+        LF -->|Lecture des fichiers .log| FB
+        FB -->|Envoi Beats 5044| L
         LP -->|Pipeline de parsing| L
         L -->|Indexation elk-demo-*| E
         E -->|Recherche / agrégations| K
@@ -44,15 +47,17 @@ flowchart LR
 ### Lecture du schema
 
 1. Les logs applicatifs sont stockes dans `log_analysed/`
-2. Docker monte ce dossier dans le conteneur `logstash`
-3. Logstash lit les fichiers, nettoie les logs et extrait les champs utiles
-4. Les evenements sont envoyes dans Elasticsearch dans les index `elk-demo-*`
-5. Kibana interroge Elasticsearch pour afficher les logs, filtres, tableaux et dashboards
+2. Docker monte ce dossier dans le conteneur `filebeat`
+3. Filebeat lit les fichiers de logs et les envoie a Logstash
+4. Logstash parse les lignes et extrait les champs utiles
+5. Les evenements sont envoyes dans Elasticsearch dans les index `elk-demo-*`
+6. Kibana interroge Elasticsearch pour afficher les logs, filtres, tableaux et dashboards
 
 ### Flux principal
 
 ```text
 log_analysed/*.log
+   -> Filebeat
    -> Logstash
    -> Elasticsearch
    -> Kibana
@@ -100,7 +105,8 @@ docker compose version
 Déclare les 3 services ELK :
 
 - Elasticsearch en mode `single-node`
-- Logstash avec la pipeline montée depuis le dossier local
+- Logstash avec la pipeline de parsing
+- Filebeat pour collecter les fichiers `.log`
 - Kibana connecté à Elasticsearch
 
 Reglages Elasticsearch utilises dans la stack :

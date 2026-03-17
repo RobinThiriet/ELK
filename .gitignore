@@ -1,6 +1,9 @@
 .DS_Store
 *.log.*
+*.pyc
+__pycache__/
 *:Zone.Identifier
 *.tmp
 *.swp
 .env
+log_analysed/python_apps/*.log
