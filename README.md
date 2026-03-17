@@ -169,6 +169,45 @@ Consulte les logs si besoin :
 docker compose logs -f
 ```
 
+## Utilisation avec Make
+
+Le projet fournit aussi un [Makefile](/root/ELK/Makefile) pour piloter l'infrastructure plus rapidement.
+
+Depuis la racine du projet :
+
+```bash
+cd /root/ELK
+make help
+```
+
+Commandes principales :
+
+```bash
+make consigne1
+make consigne2
+make consigne3
+make clean
+make prune
+make status
+```
+
+Comportement :
+
+- `make consigne1` bascule sur la branche `consigne-1-log-analysed` puis déploie la stack de la consigne 1
+- `make consigne2` bascule sur la branche `consigne-2-python-apps-filebeat` puis déploie la stack de la consigne 2
+- `make consigne3` bascule sur la branche `consigne-3-filebeat-par-service` puis déploie la stack de la consigne 3
+- `make clean` arrête et supprime proprement les conteneurs et réseaux du projet
+- `make prune` fait un nettoyage plus complet en supprimant aussi les volumes dédiés et les logs générés
+- `make status` affiche la branche active et l'état des conteneurs
+
+Exemple :
+
+```bash
+make consigne1
+make status
+make clean
+```
+
 ## Vérifier que tout fonctionne
 
 ### Elasticsearch
