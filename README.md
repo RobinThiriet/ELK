@@ -1,129 +1,83 @@
-# ELK avec Docker Compose
+# ELK - Guide principal
 
-Ce projet fournit une stack **ELK** simple a demarrer en local avec Docker Compose.
+Ce depot regroupe cinq consignes progressives autour d'une stack d'observabilite locale basee sur `Elasticsearch`, `Logstash`, `Kibana`, `Filebeat`, `Jaeger` et des applications Python de demonstration.
 
-- **Elasticsearch** stocke et indexe les donnees
-- **Logstash** recoit et transforme les logs
-- **Kibana** permet de rechercher et visualiser les evenements
+L'objectif du `main` est simple :
 
-L'objectif est d'avoir un environnement pret pour apprendre ELK, faire des tests locaux, ou demarrer une petite demo rapidement.
+- centraliser les commandes `make`
+- servir de point d'entree pour toutes les consignes
+- documenter clairement comment lancer, stopper et nettoyer l'environnement
 
-Version Elastic utilisee par defaut :
+## Consignes disponibles
 
-- `8.19.11`
-
-## Architecture
-
-Le projet demarre 3 conteneurs principaux :
-
-- `elasticsearch` sur le port `9200`
-- `logstash` sur les ports `5000` et `5044`
-- `kibana` sur le port `5601`
-
-### Schema d'architecture
-
-```mermaid
-flowchart LR
-    U[Utilisateur] -->|Navigateur| K[Kibana<br/>localhost:5601]
-    U -->|API HTTP| E[Elasticsearch<br/>localhost:9200]
-    U -->|TCP JSON| L[Logstash<br/>localhost:5000]
-
-    subgraph HOST[Machine locale / Docker Compose]
-        LF[log_analysed/*.log]
-        LP[logstash/pipeline/logstash.conf]
-        ED[(Volume Docker<br/>esdata)]
-
-        LF -->|Lecture des fichiers .log| L
-        LP -->|Pipeline de parsing| L
-        L -->|Indexation elk-demo-*| E
-        E -->|Recherche / agregations| K
-        E --> ED
-    end
-```
-
-## Structure du projet
-
-```text
-.
-├── docker-compose.yml
-├── logstash/
-│   └── pipeline/
-│       └── logstash.conf
-├── log_analysed/
-├── images/
-├── Makefile
-├── scripts/
-└── README.md
-```
+| Consigne | Branche | Objectif principal |
+| --- | --- | --- |
+| 1 | `consigne-1-log-analysed` | analyser des logs statiques deja presents |
+| 2 | `consigne-2-python-apps-filebeat` | collecter des logs dynamiques avec une application Python |
+| 3 | `consigne-3-filebeat-par-service` | separer les logs du client et du serveur avec un Filebeat par service |
+| 4 | `consigne-4-jaeger-ui` | ajouter Jaeger UI et le tracing distribue client / serveur |
+| 5 | `consigne-5-python-apps-with-db` | ajouter PostgreSQL et une variante `python_apps_with_db` |
 
 ## Prerequis
 
-- Docker installe
+- Docker
 - Docker Compose disponible via `docker compose`
+- `make`
 
 Verification rapide :
 
 ```bash
 docker --version
 docker compose version
+make --version
 ```
 
-## Demarrage direct
+## Commandes Make
 
-Place-toi dans le dossier du projet :
+Toutes les commandes se lancent depuis la racine du projet :
 
 ```bash
 cd /root/ELK
 ```
 
-Demarre la stack :
+### Aide
 
 ```bash
-docker compose up -d
-```
-
-Verifie l'etat des conteneurs :
-
-```bash
-docker compose ps
-```
-
-## Utilisation avec Make
-
-Le projet fournit aussi un [Makefile](/root/ELK/Makefile) pour piloter l'infrastructure plus rapidement.
-
-Depuis la racine du projet :
-
-```bash
-cd /root/ELK
 make help
 ```
 
-Commandes disponibles sur `main` :
+### Lancer la branche active
+
+```bash
+make up
+```
+
+Ou, de maniere equivalente :
+
+```bash
+make all
+```
+
+Comportement :
+
+- sur `main`, la commande lance la stack ELK de reference
+- sur une branche de consigne, la commande lance la stack correspondant a cette branche
+
+### Basculer et lancer directement une consigne
 
 ```bash
 make consigne1
 make consigne2
 make consigne3
-make status
-make branch
-make clean
-make prune
+make consigne4
+make consigne5
 ```
 
-### Demarrer une consigne
-
-```bash
-make consigne1
-make consigne2
-make consigne3
-```
-
-Effet :
+Chaque cible :
 
 - bascule automatiquement sur la bonne branche Git
-- demarre la stack ELK
-- demarre les services applicatifs lies a la consigne si necessaire
+- demarre les services necessaires
+- prepare l'environnement de logs associe si besoin
 
 ### Voir l'etat courant
 
@@ -131,90 +85,97 @@ Effet :
 make status
 ```
 
-Affiche :
+La commande affiche :
 
 - la branche Git active
 - l'etat des conteneurs ELK
-- l'etat des conteneurs applicatifs si presents
+- l'etat de `python_apps` si present
+- l'etat de `python_apps_with_db` si present
 
-### Voir la branche active
+### Voir la branche courante
 
 ```bash
 make branch
 ```
 
-### Tout arreter proprement
+### Arreter proprement l'environnement
 
 ```bash
 make clean
 ```
 
-Effet :
+Ou :
 
-- arrete les applications Python si elles tournent
+```bash
+make clean-all
+```
+
+La commande :
+
+- arrete `python_apps` si la variante est presente
+- arrete `python_apps_with_db` si la variante est presente
 - arrete la stack ELK
-- supprime les conteneurs du projet
-- supprime le reseau dedie du projet
+- supprime les conteneurs et les reseaux dedies
 
-Utilise `make clean` si tu veux simplement tout arreter sans supprimer les volumes persistants.
-
-### Tout nettoyer completement
+### Nettoyer completement
 
 ```bash
 make prune
 ```
 
-Effet :
+La commande :
 
 - execute d'abord `make clean`
 - supprime les volumes Docker dedies au projet
-- supprime les logs generes localement
+- supprime les logs locaux generes par les applications
 
-Utilise `make prune` si tu veux repartir d'un environnement completement neuf.
+## Flux de travail recommande
 
-### Exemples utiles
-
-Demarrer une variante :
+### Lancer une consigne precise
 
 ```bash
-make consigne3
+make consigne4
 ```
 
-Verifier l'etat :
+### Verifier l'etat
 
 ```bash
 make status
 ```
 
-Arreter proprement :
+### Arreter sans perdre les volumes
 
 ```bash
 make clean
 ```
 
-Repartir de zero :
+### Repartir de zero
 
 ```bash
 make prune
 ```
 
-## Verification
+## Points d'acces
 
-### Elasticsearch
+Selon la consigne active, les services suivants peuvent etre disponibles :
 
-```text
-http://localhost:9200
-```
+- `http://localhost:5601` : Kibana
+- `http://localhost:9200` : Elasticsearch
+- `http://localhost:8000` : API Flask
+- `http://localhost:16686` : Jaeger UI
 
-### Kibana
+## Documentation par branche
 
-```text
-http://localhost:5601
-```
+Chaque branche contient son propre `README.md` avec :
+
+- le contexte de la consigne
+- l'architecture associee
+- les commandes de lancement et d'arret
+- les points de verification dans Kibana ou Jaeger
 
 ## Fichiers importants
 
 - [Makefile](/root/ELK/Makefile)
 - [scripts/infra.sh](/root/ELK/scripts/infra.sh)
 - [docker-compose.yml](/root/ELK/docker-compose.yml)
-- [logstash.conf](/root/ELK/logstash/pipeline/logstash.conf)
+- [logstash/pipeline/logstash.conf](/root/ELK/logstash/pipeline/logstash.conf)
