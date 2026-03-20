@@ -12,12 +12,12 @@ from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExport
 from opentelemetry.instrumentation.flask import FlaskInstrumentor
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
 import psycopg2
 from opentelemetry.instrumentation.psycopg2 import Psycopg2Instrumentor
 
 # -----------------
-# TRACING CONFIG
+# CONFIGURATION DU TRACING
 # -----------------
 resource = Resource(attributes={"service.name": "api-server"})
 trace.set_tracer_provider(TracerProvider(resource=resource))
@@ -30,18 +30,18 @@ if otlp_endpoint:
     span_processor = BatchSpanProcessor(otlp_exporter)
     trace.get_tracer_provider().add_span_processor(span_processor)
 
-# Dedicated TracerProvider for PostgreSQL to simulate it as a distinct Service
+# TracerProvider dedie a PostgreSQL pour distinguer la base dans les traces
 db_resource = Resource(attributes={"service.name": "postgresql"})
 db_provider = TracerProvider(resource=db_resource)
 if span_processor:
     db_provider.add_span_processor(span_processor)
 
-# Instrument Psycopg2 for tracing using the dedicated provider
-# enable_commenter adds SQL comments to better link traces to queries
+# Instrumentation Psycopg2 avec le provider dedie
+# enable_commenter ajoute des commentaires SQL pour mieux lier les traces aux requetes
 Psycopg2Instrumentor().instrument(tracer_provider=db_provider, enable_commenter=True)
 
 # -----------------
-# LOGGING CONFIG
+# CONFIGURATION DES LOGS
 # -----------------
 class TraceInjectingFormatter(logging.Formatter):
     def format(self, record):
@@ -73,17 +73,17 @@ app = Flask(__name__)
 FlaskInstrumentor().instrument_app(app)
 
 # -----------------
-# METRICS CONFIG
+# CONFIGURATION DES METRIQUES
 # -----------------
-# This automatically exposes a /metrics endpoint and tracks requests.
+# Expose automatiquement /metrics et suit les requetes HTTP.
 metrics = PrometheusMetrics(app)
 
-# Static information as metric
+# Information statique exposee comme metrique
 metrics.info('app_info', 'Application info', version='1.0.0')
 
 def get_db_connection():
     """
-    Returns a new connection to the PostgreSQL database using environment variables.
+    Retourne une connexion PostgreSQL a partir des variables d'environnement.
     """
     return psycopg2.connect(
         host=os.getenv("DB_HOST", "db"),
@@ -95,46 +95,46 @@ def get_db_connection():
 
 def init_db():
     """
-    Initializes the database: waits for connection, creates table, and inserts sample data.
+    Initialise la base : attend la connexion, cree la table et injecte des donnees d'exemple.
     """
-    logger.info("Initializing database connection and schema...")
+    logger.info("Initialisation de la connexion a la base et du schema...")
     max_retries = 10
     for i in range(max_retries):
         try:
             conn = get_db_connection()
             cur = conn.cursor()
-            # Create table if it doesn't exist
+            # Cree la table si elle n'existe pas
             cur.execute("CREATE TABLE IF NOT EXISTS lab_data (id SERIAL PRIMARY KEY, value INTEGER);")
             
-            # Insert sample data if empty
+            # Insere des donnees d'exemple si la table est vide
             cur.execute("SELECT COUNT(*) FROM lab_data;")
             if cur.fetchone()[0] == 0:
-                logger.info("Database empty. Inserting sample data matching original API.")
+                logger.info("Base vide. Insertion des donnees de test.")
                 sample_values = [1, 2, 3, 4, 5]
                 for val in sample_values:
                     cur.execute("INSERT INTO lab_data (value) VALUES (%s);", (val,))
                 conn.commit()
-                logger.info("Sample data inserted successfully.")
+                logger.info("Donnees de test inserees avec succes.")
             
             cur.close()
             conn.close()
-            logger.info("Database initialization complete.")
+            logger.info("Initialisation de la base terminee.")
             return True
         except Exception as e:
-            logger.warning(f"Database connection attempt {i+1}/{max_retries} failed: {e}")
+            logger.warning(f"Echec de connexion a la base ({i+1}/{max_retries}) : {e}")
             time.sleep(3)
     
-    logger.critical("Failed to connect to database after multiple retries. Exiting.")
+    logger.critical("Impossible de se connecter a la base apres plusieurs tentatives. Arret.")
     sys.exit(1)
 
 def crash_simulator():
     """
-    Background thread that randomly crashes the server.
-    This simulates incidents like High CPU, RAM full, or sudden process death,
-    forcing students to analyze the logs/metrics and react.
+    Thread de fond qui provoque aleatoirement des incidents sur le serveur.
+    Cela simule des problemes comme une surcharge CPU, une fuite memoire
+    ou un crash brutal, afin de travailler l'analyse de logs et de metriques.
     """
-    logger.info("Crash simulator initialized. Server will experience an incident later.")
-    # Wait between 2 minutes and 10 minutes before an incident
+    logger.info("Simulateur de chaos initialise. Un incident surviendra plus tard.")
+    # Attend entre 2 et 10 minutes avant de declencher un incident
     wait_time = random.randint(120, 600)
     time.sleep(wait_time)
     
@@ -145,7 +145,7 @@ def crash_simulator():
     
     if incident == 'cpu_spike':
         logger.error("SYSTEM ALERT: CPU load reaching 100%. System becoming unresponsive.")
-        # Simulating 100% CPU on this thread
+        # Simule 100 % de CPU sur ce thread
         while True:
             pass
             
@@ -154,9 +154,9 @@ def crash_simulator():
         leak_array = []
         try:
             while True:
-                # Appending large blocks of strings to fill RAM
-                leak_array.append(" " * (10 ** 7)) # ~10MB per iteration
-                time.sleep(0.05) # Ramp up memory fast
+                # Ajoute de gros blocs de texte pour saturer la memoire
+                leak_array.append(" " * (10 ** 7)) # ~10 Mo par iteration
+                time.sleep(0.05) # Monte vite en charge memoire
         except MemoryError:
             logger.critical("SYSTEM ALERT: MemoryError raised! Crashing process.")
             os._exit(1)
@@ -167,23 +167,23 @@ def crash_simulator():
 
 @app.route('/')
 def index():
-    logger.info("Accessing root endpoint")
-    return jsonify({"status": "running", "message": "Welcome to the Observability Lab API"})
+    logger.info("Acces a l'endpoint racine")
+    return jsonify({"status": "running", "message": "Bienvenue sur l'API du laboratoire d'observabilite"})
 
 @app.route('/data')
 def get_data():
-    logger.debug("Received request on /data endpoint")
+    logger.debug("Requete recue sur /data")
     
-    # Simulate random latency
+    # Simule une latence aleatoire
     if random.random() < 0.2:
         sleep_time = random.uniform(0.5, 3.0)
-        logger.warning(f"Simulating high latency: Request will take {sleep_time:.2f}s")
+        logger.warning(f"Simulation de forte latence : la requete prendra {sleep_time:.2f}s")
         time.sleep(sleep_time)
         
-    # Simulate random 500 internal server errors (keeping existing logic for the lab)
+    # Simule aleatoirement des erreurs 500 pour le TP
     if random.random() < 0.1:
-        logger.error("Failed to fetch data from the database. Simulated database connection timeout.")
-        return jsonify({"error": "Database connection failed", "details": "Timeout"}), 500
+        logger.error("Echec de lecture depuis la base. Simulation d'un timeout de connexion.")
+        return jsonify({"error": "Echec de connexion a la base", "details": "Timeout"}), 500
         
     try:
         with tracer.start_as_current_span(
@@ -204,35 +204,35 @@ def get_data():
             cur.close()
             conn.close()
             
-        logger.info(f"Successfully fetched {len(data)} items from PostgreSQL database.")
+        logger.info(f"Lecture reussie de {len(data)} elements depuis PostgreSQL.")
         return jsonify({"data": data, "count": len(data)})
     except Exception as e:
-        logger.error(f"Unexpected error querying PostgreSQL: {e}")
-        return jsonify({"error": "Internal server error", "details": str(e)}), 500
+        logger.error(f"Erreur inattendue pendant la requete PostgreSQL : {e}")
+        return jsonify({"error": "Erreur interne du serveur", "details": str(e)}), 500
 
 @app.route('/process', methods=['POST'])
 def process_data():
-    logger.debug("Received POST request on /process endpoint")
+    logger.debug("Requete POST recue sur /process")
     payload = request.json
     
     if not payload:
-        logger.warning("Received an empty POST payload.")
-        return jsonify({"error": "No payload provided"}), 400
+        logger.warning("Payload POST vide recu.")
+        return jsonify({"error": "Aucun payload fourni"}), 400
         
-    logger.info(f"Processing payload of size {len(str(payload))}")
-    time.sleep(random.uniform(0.1, 0.5)) # Small processing time
+    logger.info(f"Traitement d'un payload de taille {len(str(payload))}")
+    time.sleep(random.uniform(0.1, 0.5)) # Petit temps de traitement
     
-    # Randomly fail the processing
+    # Fait echouer aleatoirement le traitement
     if random.random() < 0.05:
-        logger.error("Data processing failed due to internal validation error.")
-        return jsonify({"error": "Validation failed on payload"}), 422
+        logger.error("Echec du traitement a cause d'une erreur de validation interne.")
+        return jsonify({"error": "Echec de validation du payload"}), 422
         
-    logger.info("Processing completed successfully.")
+    logger.info("Traitement termine avec succes.")
     return jsonify({"status": "processed", "result": "success"})
 
 @app.route('/fake')
 def fake_query():
-    logger.debug("Received request on /fake endpoint")
+    logger.debug("Requete recue sur /fake")
     try:
         with tracer.start_as_current_span(
             "fake-failing-db-query", 
@@ -246,24 +246,24 @@ def fake_query():
         ):
             conn = get_db_connection()
             cur = conn.cursor()
-            # This query will purposely fail to generate a PostgreSQL error log
+            # Cette requete echoue volontairement pour generer une erreur PostgreSQL
             cur.execute("SELECT * FROM non_existent_table;")
             cur.fetchall()
             cur.close()
             conn.close()
     except Exception as e:
-        logger.error(f"Intentional database error triggered on /fake: {e}")
-        return jsonify({"error": "Fake query failed", "details": str(e)}), 500
+        logger.error(f"Erreur base volontaire declenchee sur /fake : {e}")
+        return jsonify({"error": "Echec volontaire de la requete fictive", "details": str(e)}), 500
         
-    return jsonify({"warning": "This should not have succeeded"}), 200
+    return jsonify({"warning": "Cette requete n'aurait pas du reussir"}), 200
 
 if __name__ == '__main__':
-    # Initialize database before starting the server
+    # Initialise la base avant le demarrage du serveur
 
     init_db()
     
-    # Start the "chaos monkey" crash simulator in the background
+    # Lance le simulateur de chaos en arriere-plan
     threading.Thread(target=crash_simulator, daemon=True).start()
     
-    logger.info("Starting Flask Observability application on port 5000")
+    logger.info("Demarrage de l'application Flask d'observabilite sur le port 5000")
     app.run(host='0.0.0.0', port=5000)

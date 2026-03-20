@@ -3,7 +3,7 @@ SHELL := /bin/bash
 .PHONY: help consigne1 consigne2 consigne3 consigne4 consigne5 clean prune status branch
 
 help:
-	@echo "Targets disponibles :"
+	@echo "Cibles disponibles :"
 	@echo "  make consigne1  - deploye la branche consigne 1 (logs statiques)"
 	@echo "  make consigne2  - deploye la branche consigne 2 (server/client + Filebeat partage)"
 	@echo "  make consigne3  - deploye la branche consigne 3 (un Filebeat par service)"

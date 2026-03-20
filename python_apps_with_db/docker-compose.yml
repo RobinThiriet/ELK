@@ -7,9 +7,9 @@ services:
     environment:
       - LOG_DIR=/app/logs
       - DB_HOST=db
-      - DB_NAME=observability
-      - DB_USER=observability
-      - DB_PASSWORD=observability
+      - DB_NAME=postgres
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4317
     depends_on:
       db:
@@ -43,13 +43,13 @@ services:
     image: postgres:16-alpine
     container_name: chaos-db-server
     environment:
-      - POSTGRES_DB=observability
-      - POSTGRES_USER=observability
-      - POSTGRES_PASSWORD=observability
+      - POSTGRES_DB=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U observability -d observability"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
       interval: 10s
       timeout: 5s
       retries: 10

@@ -14,7 +14,7 @@ from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.trace.status import Status, StatusCode
 
 # -----------------
-# TRACING CONFIG
+# CONFIGURATION DU TRACING
 # -----------------
 resource = Resource(attributes={"service.name": "api-client"})
 trace.set_tracer_provider(TracerProvider(resource=resource))
@@ -26,11 +26,11 @@ if otlp_endpoint:
     span_processor = BatchSpanProcessor(otlp_exporter)
     trace.get_tracer_provider().add_span_processor(span_processor)
 
-# Automatically instrument the requests library so headers containing traceparent are injected
+# Instrumente automatiquement `requests` pour propager `traceparent`
 RequestsInstrumentor().instrument()
 
 # -----------------
-# LOGGING CONFIG
+# CONFIGURATION DES LOGS
 # -----------------
 class TraceInjectingFormatter(logging.Formatter):
     def format(self, record):
@@ -61,12 +61,12 @@ logger.addHandler(file_handler)
 SERVER_URL = os.getenv("SERVER_URL", "http://localhost:5000")
 
 def run_client():
-    logger.info(f"Starting API client. Will continuously send requests to {SERVER_URL}")
+    logger.info(f"Demarrage du client API. Envoi continu de requetes vers {SERVER_URL}")
     request_interval = 1.0
     
     while True:
         try:
-            # Randomly pick an endpoint to send traffic to
+            # Choisit aleatoirement un endpoint pour generer du trafic
             endpoint = random.choices(
                 ['/', '/data', '/process', '/fake'], 
                 weights=[0.1, 0.6, 0.2, 0.1]
@@ -95,29 +95,28 @@ def run_client():
                 else:
                     span.set_status(Status(StatusCode.OK))
 
-                # Log based on the status code to generate meaningful logs for students
+                # Journalise selon le code HTTP pour produire des logs utiles
                 if response.status_code == 200:
-                    logger.info(f"SUCCESS (200 OK) | Endpoint: {endpoint} | Latency: {elapsed:.2f}s")
+                    logger.info(f"SUCCES (200 OK) | Endpoint: {endpoint} | Latence: {elapsed:.2f}s")
                 elif response.status_code >= 500:
-                    logger.error(f"SERVER ERROR ({response.status_code}) | Endpoint: {endpoint} | Response: {response.text}")
+                    logger.error(f"ERREUR SERVEUR ({response.status_code}) | Endpoint: {endpoint} | Reponse: {response.text}")
                 elif response.status_code >= 400:
-                    logger.warning(f"CLIENT ERROR ({response.status_code}) | Endpoint: {endpoint} | Response: {response.text}")
+                    logger.warning(f"ERREUR CLIENT ({response.status_code}) | Endpoint: {endpoint} | Reponse: {response.text}")
                 else:
-                    logger.info(f"UNEXPECTED STATUS ({response.status_code}) | Endpoint: {endpoint}")
+                    logger.info(f"STATUT INATTENDU ({response.status_code}) | Endpoint: {endpoint}")
                 
         except requests.exceptions.Timeout:
-            logger.error(f"TIMEOUT: Request to {SERVER_URL}{endpoint} timed out!")
+            logger.error(f"TIMEOUT : la requete vers {SERVER_URL}{endpoint} a expire !")
         except requests.exceptions.ConnectionError:
-            logger.critical(f"CONNECTION FAILED: Cannot reach the server at {SERVER_URL}. Is it down?")
+            logger.critical(f"ECHEC DE CONNEXION : impossible de joindre le serveur a l'adresse {SERVER_URL}.")
         except Exception as e:
-            logger.error(f"UNEXPECTED EXCEPTION: {e}")
+            logger.error(f"EXCEPTION INATTENDUE : {e}")
             
-        # Vary the load over time
-        # This will create distinct request rate patterns in Prometheus
+        # Fait varier la charge dans le temps
         if random.random() < 0.05:
-            # Fluctuate the interval between 0.1 (high load) and 3.0 (low load)
+            # Fait varier l'intervalle entre 0.1 (forte charge) et 3.0 (faible charge)
             request_interval = random.uniform(0.1, 3.0)
-            logger.debug(f"Adjusting request interval to {request_interval:.2f} seconds")
+            logger.debug(f"Ajustement de l'intervalle de requete a {request_interval:.2f} seconde(s)")
             
         time.sleep(request_interval)
 

@@ -43,9 +43,10 @@ docker compose up --build -d
 
 Le service `db` lance PostgreSQL avec :
 
-- base : `observability`
-- utilisateur : `observability`
-- mot de passe : `observability`
+- hote : `db`
+- base : `postgres`
+- utilisateur : `postgres`
+- mot de passe : `postgres`
 
 Le serveur initialise automatiquement la table `lab_data` et injecte des donnees de test si besoin.
 
