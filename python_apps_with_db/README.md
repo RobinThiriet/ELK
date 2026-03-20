@@ -24,8 +24,8 @@ docker compose up --build -d
 
 ## Logs produits
 
-- `python_apps_with_db/runtime_logs/server/server.log`
-- `python_apps_with_db/runtime_logs/client/client.log`
+- `python_apps_with_db/runtime_logs/server/api-server-db.log`
+- `python_apps_with_db/runtime_logs/client/api-client-db.log`
 
 ## Collecte
 
@@ -53,11 +53,11 @@ Le serveur initialise automatiquement la table `lab_data` et injecte des donnees
 ## Ce qu'il faut surveiller dans Kibana
 
 ```text
-source_filename : "server.log"
+source_filename : "api-server-db.log"
 ```
 
 ```text
-source_filename : "client.log"
+source_filename : "api-client-db.log"
 ```
 
 ```text

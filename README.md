@@ -33,8 +33,8 @@ flowchart LR
         S[server]
         C[client]
         DB[(PostgreSQL)]
-        SL[python_apps_with_db/runtime_logs/server/server.log]
-        CL[python_apps_with_db/runtime_logs/client/client.log]
+        SL[python_apps_with_db/runtime_logs/server/api-server-db.log]
+        CL[python_apps_with_db/runtime_logs/client/api-client-db.log]
         FBS[Filebeat server]
         FBC[Filebeat client]
 
@@ -113,8 +113,8 @@ make prune
 ## Fonctionnement
 
 1. `db` demarre PostgreSQL.
-2. `server` initialise la base puis ecrit `server.log` dans `python_apps_with_db/runtime_logs/server/`.
-3. `client` ecrit `client.log` dans `python_apps_with_db/runtime_logs/client/`.
+2. `server` initialise la base puis ecrit `api-server-db.log` dans `python_apps_with_db/runtime_logs/server/`.
+3. `client` ecrit `api-client-db.log` dans `python_apps_with_db/runtime_logs/client/`.
 4. `filebeat-server` lit uniquement les logs du serveur.
 5. `filebeat-client` lit uniquement les logs du client.
 6. les deux envoient les evenements vers `logstash:5044`.
@@ -145,11 +145,11 @@ http://localhost:16686
 Dans `Discover`, utilise la Data View `demo`, puis essaye par exemple :
 
 ```text
-source_filename : "server.log"
+source_filename : "api-server-db.log"
 ```
 
 ```text
-source_filename : "client.log"
+source_filename : "api-client-db.log"
 ```
 
 ```text

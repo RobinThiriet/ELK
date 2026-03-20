@@ -1,6 +1,6 @@
 filebeat.inputs:
   - type: filestream
-    id: python-with-db-server-logs
+    id: api-server-db-logs
     enabled: true
     paths:
       - /srv/logs/*.log

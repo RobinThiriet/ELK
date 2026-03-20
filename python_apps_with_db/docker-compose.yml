@@ -3,7 +3,7 @@ services:
     build:
       context: ./server
       dockerfile: Dockerfile
-    container_name: chaos-api-server
+    container_name: chaos-api-server-db
     environment:
       - LOG_DIR=/app/logs
       - DB_HOST=db
@@ -26,7 +26,7 @@ services:
     build:
       context: ./client
       dockerfile: Dockerfile
-    container_name: chaos-api-client
+    container_name: chaos-api-client-db
     environment:
       - SERVER_URL=http://server:5000
       - LOG_DIR=/app/logs
@@ -41,7 +41,7 @@ services:
 
   db:
     image: postgres:16-alpine
-    container_name: chaos-db-server
+    container_name: chaos-db-server-db
     environment:
       - POSTGRES_DB=postgres
       - POSTGRES_USER=postgres
@@ -58,7 +58,7 @@ services:
 
   filebeat-server:
     image: docker.elastic.co/beats/filebeat:${STACK_VERSION:-8.19.11}
-    container_name: chaos-filebeat-server
+    container_name: chaos-filebeat-server-db
     user: root
     depends_on:
       - server
@@ -73,7 +73,7 @@ services:
 
   filebeat-client:
     image: docker.elastic.co/beats/filebeat:${STACK_VERSION:-8.19.11}
-    container_name: chaos-filebeat-client
+    container_name: chaos-filebeat-client-db
     user: root
     depends_on:
       - client

@@ -24,6 +24,11 @@ PY_CONTAINERS=(
   "chaos-filebeat-server"
   "chaos-filebeat-client"
   "chaos-db-server"
+  "chaos-api-server-db"
+  "chaos-api-client-db"
+  "chaos-filebeat-server-db"
+  "chaos-filebeat-client-db"
+  "chaos-db-server-db"
 )
 
 VOLUMES=(
@@ -84,6 +89,9 @@ ensure_python_with_db_dirs() {
   mkdir -p \
     "$ROOT_DIR/python_apps_with_db/runtime_logs/server" \
     "$ROOT_DIR/python_apps_with_db/runtime_logs/client"
+  rm -f \
+    "$ROOT_DIR/python_apps_with_db/runtime_logs/server/server.log" \
+    "$ROOT_DIR/python_apps_with_db/runtime_logs/client/client.log"
 }
 
 deploy_consigne1() {

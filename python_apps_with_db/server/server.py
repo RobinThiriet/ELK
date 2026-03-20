@@ -19,7 +19,7 @@ from opentelemetry.instrumentation.psycopg2 import Psycopg2Instrumentor
 # -----------------
 # CONFIGURATION DU TRACING
 # -----------------
-resource = Resource(attributes={"service.name": "api-server"})
+resource = Resource(attributes={"service.name": "api-server-db"})
 trace.set_tracer_provider(TracerProvider(resource=resource))
 tracer = trace.get_tracer(__name__)
 
@@ -61,10 +61,10 @@ console_handler.setFormatter(log_formatter)
 
 LOG_DIR = os.getenv("LOG_DIR", "/app/logs")
 os.makedirs(LOG_DIR, exist_ok=True)
-file_handler = logging.FileHandler(os.path.join(LOG_DIR, "server.log"))
+file_handler = logging.FileHandler(os.path.join(LOG_DIR, "api-server-db.log"))
 file_handler.setFormatter(log_formatter)
 
-logger = logging.getLogger("api-server")
+logger = logging.getLogger("api-server-db")
 logger.setLevel(logging.DEBUG)
 logger.addHandler(console_handler)
 logger.addHandler(file_handler)

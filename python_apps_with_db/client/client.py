@@ -16,7 +16,7 @@ from opentelemetry.trace.status import Status, StatusCode
 # -----------------
 # CONFIGURATION DU TRACING
 # -----------------
-resource = Resource(attributes={"service.name": "api-client"})
+resource = Resource(attributes={"service.name": "api-client-db"})
 trace.set_tracer_provider(TracerProvider(resource=resource))
 tracer = trace.get_tracer(__name__)
 
@@ -50,10 +50,10 @@ console_handler.setFormatter(log_formatter)
 
 LOG_DIR = os.getenv("LOG_DIR", "/app/logs")
 os.makedirs(LOG_DIR, exist_ok=True)
-file_handler = logging.FileHandler(os.path.join(LOG_DIR, "client.log"))
+file_handler = logging.FileHandler(os.path.join(LOG_DIR, "api-client-db.log"))
 file_handler.setFormatter(log_formatter)
 
-logger = logging.getLogger("api-client")
+logger = logging.getLogger("api-client-db")
 logger.setLevel(logging.DEBUG)
 logger.addHandler(console_handler)
 logger.addHandler(file_handler)
@@ -74,7 +74,7 @@ def run_client():
             
             with tracer.start_as_current_span("client_request") as span:
                 span.set_attribute("http.url", endpoint)
-                span.set_attribute("app.target", "api-server")
+                span.set_attribute("app.target", "api-server-db")
                 span.set_attribute("app.request_interval_seconds", request_interval)
                 logger.debug(f"Attempting to request {endpoint}")
                 start_time = time.time()
