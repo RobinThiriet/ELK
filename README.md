@@ -18,6 +18,16 @@ L'objectif du `main` est simple :
 | 4 | `consigne-4-jaeger-ui` | ajouter Jaeger UI et le tracing distribue client / serveur |
 | 5 | `consigne-5-python-apps-with-db` | ajouter PostgreSQL et une variante `python_apps_with_db` |
 
+## Tableau recapitulatif
+
+| Consigne | Commande | Ce que ca lance | Ports utiles | Verification recommandee |
+| --- | --- | --- | --- | --- |
+| 1 | `make consigne1` | ELK + ingestion de logs statiques | `5601`, `9200` | ouvrir Kibana et verifier les index `elk-demo-*` |
+| 2 | `make consigne2` | ELK + `python_apps` + Filebeat partage | `8000`, `5601`, `9200` | verifier `server.log` et `client.log` dans Kibana |
+| 3 | `make consigne3` | ELK + `python_apps` + un Filebeat par service | `8000`, `5601`, `9200` | verifier la separation des logs client / serveur |
+| 4 | `make consigne4` | ELK + `python_apps` + Jaeger UI | `8000`, `5601`, `9200`, `16686` | verifier les logs dans Kibana et les traces dans Jaeger |
+| 5 | `make consigne5` | ELK + `python_apps_with_db` + PostgreSQL | `8000`, `5601`, `9200`, `16686` | verifier `api-client-db`, `api-server-db` et les logs lies a PostgreSQL |
+
 ## Prerequis
 
 - Docker
