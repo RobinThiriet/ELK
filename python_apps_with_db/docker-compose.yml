@@ -1,0 +1,97 @@
+services:
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: chaos-api-server
+    environment:
+      - LOG_DIR=/app/logs
+      - DB_HOST=db
+      - DB_NAME=observability
+      - DB_USER=observability
+      - DB_PASSWORD=observability
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4317
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8000:5000"
+    volumes:
+      - ./runtime_logs/server:/app/logs
+    networks:
+      - default
+      - observability
+
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: chaos-api-client
+    environment:
+      - SERVER_URL=http://server:5000
+      - LOG_DIR=/app/logs
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4317
+    depends_on:
+      - server
+    volumes:
+      - ./runtime_logs/client:/app/logs
+    networks:
+      - default
+      - observability
+
+  db:
+    image: postgres:16-alpine
+    container_name: chaos-db-server
+    environment:
+      - POSTGRES_DB=observability
+      - POSTGRES_USER=observability
+      - POSTGRES_PASSWORD=observability
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U observability -d observability"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - default
+
+  filebeat-server:
+    image: docker.elastic.co/beats/filebeat:${STACK_VERSION:-8.19.11}
+    container_name: chaos-filebeat-server
+    user: root
+    depends_on:
+      - server
+    command: ["filebeat", "-e", "--strict.perms=false"]
+    volumes:
+      - ./filebeat/server-filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+      - ./runtime_logs/server:/srv/logs:ro
+      - filebeat_server_data:/usr/share/filebeat/data
+    networks:
+      - default
+      - observability
+
+  filebeat-client:
+    image: docker.elastic.co/beats/filebeat:${STACK_VERSION:-8.19.11}
+    container_name: chaos-filebeat-client
+    user: root
+    depends_on:
+      - client
+    command: ["filebeat", "-e", "--strict.perms=false"]
+    volumes:
+      - ./filebeat/client-filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+      - ./runtime_logs/client:/srv/logs:ro
+      - filebeat_client_data:/usr/share/filebeat/data
+    networks:
+      - default
+      - observability
+
+volumes:
+  postgres_data:
+  filebeat_server_data:
+  filebeat_client_data:
+
+networks:
+  observability:
+    external: true
+    name: elk-observability

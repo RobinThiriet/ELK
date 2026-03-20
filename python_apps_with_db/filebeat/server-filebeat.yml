@@ -1,0 +1,16 @@
+filebeat.inputs:
+  - type: filestream
+    id: python-with-db-server-logs
+    enabled: true
+    paths:
+      - /srv/logs/*.log
+    fields:
+      collector_role: server
+      source_service: server
+    fields_under_root: true
+
+processors:
+  - add_host_metadata: ~
+
+output.logstash:
+  hosts: ["logstash:5044"]
