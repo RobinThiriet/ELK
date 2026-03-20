@@ -6,12 +6,14 @@ services:
     container_name: chaos-api-server
     environment:
       - LOG_DIR=/app/logs
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4317
     ports:
       - "8000:5000"
     volumes:
       - ./runtime_logs/server:/app/logs
     networks:
       - default
+      - observability
 
   client:
     build:
@@ -21,12 +23,14 @@ services:
     environment:
       - SERVER_URL=http://server:5000
       - LOG_DIR=/app/logs
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4317
     depends_on:
       - server
     volumes:
       - ./runtime_logs/client:/app/logs
     networks:
       - default
+      - observability
 
   filebeat-server:
     image: docker.elastic.co/beats/filebeat:${STACK_VERSION:-8.19.11}

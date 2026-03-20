@@ -1,4 +1,4 @@
-# Consigne 3 - python_apps avec un Filebeat par service
+# Consigne 4 - python_apps avec Filebeat par service et Jaeger UI
 
 Ce dossier contient la variante la plus proche d'un cas reel pour le TP.
 
@@ -9,6 +9,7 @@ Principe :
 - `filebeat-server` collecte uniquement les logs du serveur
 - `filebeat-client` collecte uniquement les logs du client
 - les deux envoient les evenements vers la stack ELK principale
+- les deux exportent aussi leurs traces distribuees vers `Jaeger`
 
 ## Services
 
@@ -16,6 +17,7 @@ Principe :
 - `client`
 - `filebeat-server`
 - `filebeat-client`
+- `Jaeger` dans la stack racine pour la visualisation des traces
 
 ## Lancement
 
@@ -51,12 +53,25 @@ logstash:5044
 
 sur le reseau partage `elk-observability`.
 
+Pour le tracing, `server` et `client` exportent leurs spans vers :
+
+```text
+jaeger:4317
+```
+
+et l'interface est disponible sur :
+
+```text
+http://localhost:16686
+```
+
 ## Pourquoi cette approche
 
 - on se rapproche d'un fonctionnement reel
 - chaque service garde ses logs localement
 - chaque source a son propre collecteur
 - on peut faire evoluer les deux collecteurs separement
+- on visualise aussi les traces distribuees entre le client et le serveur
 
 ## Ce qu'il faut surveiller dans Kibana
 

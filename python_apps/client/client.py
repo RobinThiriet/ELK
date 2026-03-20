@@ -11,6 +11,7 @@ from opentelemetry.instrumentation.requests import RequestsInstrumentor
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.trace.status import Status, StatusCode
 
 # -----------------
 # TRACING CONFIG
@@ -70,29 +71,40 @@ def run_client():
                 ['/', '/data', '/process'], 
                 weights=[0.1, 0.7, 0.2]
             )[0]
-            
+
             with tracer.start_as_current_span("client_request") as span:
                 span.set_attribute("http.url", endpoint)
+                span.set_attribute("app.target", "api-server")
+                span.set_attribute("app.request_interval_seconds", request_interval)
                 logger.debug(f"Attempting to request {endpoint}")
-            start_time = time.time()
-            
-            if endpoint == '/process':
-                payload = {"key": "observability_test", "id": random.randint(1, 10000)}
-                response = requests.post(f"{SERVER_URL}{endpoint}", json=payload, timeout=5)
-            else:
-                response = requests.get(f"{SERVER_URL}{endpoint}", timeout=5)
-                
-            elapsed = time.time() - start_time
-            
-            # Log based on the status code to generate meaningful logs for students
-            if response.status_code == 200:
-                logger.info(f"SUCCESS (200 OK) | Endpoint: {endpoint} | Latency: {elapsed:.2f}s")
-            elif response.status_code >= 500:
-                logger.error(f"SERVER ERROR ({response.status_code}) | Endpoint: {endpoint} | Response: {response.text}")
-            elif response.status_code >= 400:
-                logger.warning(f"CLIENT ERROR ({response.status_code}) | Endpoint: {endpoint} | Response: {response.text}")
-            else:
-                logger.info(f"UNEXPECTED STATUS ({response.status_code}) | Endpoint: {endpoint}")
+
+                start_time = time.time()
+
+                if endpoint == '/process':
+                    payload = {"key": "observability_test", "id": random.randint(1, 10000)}
+                    response = requests.post(f"{SERVER_URL}{endpoint}", json=payload, timeout=5)
+                else:
+                    response = requests.get(f"{SERVER_URL}{endpoint}", timeout=5)
+
+                elapsed = time.time() - start_time
+                span.set_attribute("http.status_code", response.status_code)
+                span.set_attribute("http.target", endpoint)
+                span.set_attribute("app.response_latency_seconds", elapsed)
+
+                if response.status_code >= 500:
+                    span.set_status(Status(StatusCode.ERROR))
+                else:
+                    span.set_status(Status(StatusCode.OK))
+
+                # Log based on the status code to generate meaningful logs for students
+                if response.status_code == 200:
+                    logger.info(f"SUCCESS (200 OK) | Endpoint: {endpoint} | Latency: {elapsed:.2f}s")
+                elif response.status_code >= 500:
+                    logger.error(f"SERVER ERROR ({response.status_code}) | Endpoint: {endpoint} | Response: {response.text}")
+                elif response.status_code >= 400:
+                    logger.warning(f"CLIENT ERROR ({response.status_code}) | Endpoint: {endpoint} | Response: {response.text}")
+                else:
+                    logger.info(f"UNEXPECTED STATUS ({response.status_code}) | Endpoint: {endpoint}")
                 
         except requests.exceptions.Timeout:
             logger.error(f"TIMEOUT: Request to {SERVER_URL}{endpoint} timed out!")

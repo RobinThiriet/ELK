@@ -49,6 +49,29 @@ services:
     ports:
       - "5601:5601"
 
+  jaeger:
+    image: jaegertracing/all-in-one:1.76.0
+    container_name: elk-jaeger
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    ports:
+      - "16686:16686"
+      - "4317:4317"
+    networks:
+      default:
+      observability:
+        aliases:
+          - jaeger
+
+  kibana-setup:
+    image: curlimages/curl:8.12.1
+    container_name: elk-kibana-setup
+    depends_on:
+      - kibana
+    volumes:
+      - ./scripts/kibana-bootstrap.sh:/setup/kibana-bootstrap.sh:ro
+    entrypoint: ["sh", "/setup/kibana-bootstrap.sh"]
+
 volumes:
   esdata:
 

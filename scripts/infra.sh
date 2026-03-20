@@ -6,11 +6,14 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BRANCH_CONSIGNE1="consigne-1-log-analysed"
 BRANCH_CONSIGNE2="consigne-2-python-apps-filebeat"
 BRANCH_CONSIGNE3="consigne-3-filebeat-par-service"
+BRANCH_CONSIGNE4="consigne-4-jaeger-ui"
 
 ROOT_CONTAINERS=(
   "elk-elasticsearch"
   "elk-logstash"
   "elk-kibana"
+  "elk-jaeger"
+  "elk-kibana-setup"
   "elk-filebeat"
 )
 
@@ -88,6 +91,16 @@ deploy_consigne3() {
   echo "-> Consigne 3 prete"
 }
 
+deploy_consigne4() {
+  switch_branch "$BRANCH_CONSIGNE4"
+  ensure_python_dirs
+  echo "-> Demarrage de la stack ELK + Jaeger pour la consigne 4"
+  compose_root up -d
+  echo "-> Demarrage de python_apps pour la consigne 4"
+  compose_python up --build -d
+  echo "-> Consigne 4 prete"
+}
+
 clean_stack() {
   echo "-> Arret de python_apps si present"
   compose_python down --remove-orphans || true
@@ -134,7 +147,7 @@ status_stack() {
 usage() {
   cat <<'EOF'
 Usage:
-  ./scripts/infra.sh deploy consigne1|consigne2|consigne3
+  ./scripts/infra.sh deploy consigne1|consigne2|consigne3|consigne4
   ./scripts/infra.sh clean
   ./scripts/infra.sh prune
   ./scripts/infra.sh status
@@ -150,6 +163,7 @@ main() {
         consigne1) deploy_consigne1 ;;
         consigne2) deploy_consigne2 ;;
         consigne3) deploy_consigne3 ;;
+        consigne4) deploy_consigne4 ;;
         *) usage; exit 1 ;;
       esac
       ;;
