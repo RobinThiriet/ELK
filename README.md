@@ -147,6 +147,49 @@ La commande :
 - supprime les volumes Docker dedies au projet
 - supprime les logs locaux generes par les applications
 
+## Exemples rapides
+
+### Consigne 1
+
+```bash
+make consigne1
+make clean1
+```
+
+### Consigne 2
+
+```bash
+make consigne2
+make clean2
+```
+
+### Consigne 3
+
+```bash
+make consigne3
+make clean3
+```
+
+### Consigne 4
+
+```bash
+make consigne4
+make clean4
+```
+
+### Consigne 5
+
+```bash
+make consigne5
+make clean5
+```
+
+### Tout arreter
+
+```bash
+make clean-all
+```
+
 ## Flux de travail recommande
 
 ### Lancer une consigne precise
