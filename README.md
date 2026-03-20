@@ -1,25 +1,31 @@
-# Consigne 5 - python_apps_with_db avec PostgreSQL, ELK et logs applicatifs
+# Consigne 5 - `python_apps_with_db` avec PostgreSQL et ELK
 
-Cette branche ajoute une nouvelle variante basee sur `python_apps_with_db`.
+Cette branche introduit une nouvelle variante applicative avec base de donnees : `python_apps_with_db`. Le `server` s'appuie sur `PostgreSQL`, le `client` genere du trafic, et les logs restent centralises dans ELK.
 
-Objectif :
+## Objectif
 
-- demarrer un `server` Flask relie a PostgreSQL
-- demarrer un `client` qui genere du trafic, y compris vers un endpoint `/fake`
-- ecrire les logs du `server` et du `client` dans des dossiers dedies
-- collecter ces logs avec un `Filebeat` par service
-- envoyer les evenements vers `Logstash`, `Elasticsearch` puis `Kibana`
+- deployer un `server` Python relie a `PostgreSQL`
+- deployer un `client` dedie a cette variante
+- conserver une separation claire des logs applicatifs
+- retrouver les logs du `client`, du `server` et des operations SQL dans `Kibana`
 
-La stack racine conserve aussi `Jaeger UI`, deja presente sur les branches recentes.
+## Principe
 
-## Branches disponibles
+La variante base de donnees se distingue explicitement de `python_apps` :
 
-- `main` : branche de reference
-- `consigne-1-log-analysed` : logs statiques dans `log_analysed/`
-- `consigne-2-python-apps-filebeat` : logs dynamiques centralises
-- `consigne-3-filebeat-par-service` : un Filebeat par service
-- `consigne-4-jaeger-ui` : consigne 3 avec Jaeger UI
-- `consigne-5-python-apps-with-db` : `python_apps_with_db` + PostgreSQL + ELK
+- `api-server-db` pour le serveur
+- `api-client-db` pour le client
+- `db` pour PostgreSQL
+- `filebeat-server-db` et `filebeat-client-db` pour la collecte
+
+Les variables d'environnement PostgreSQL attendues par le serveur sont :
+
+```text
+DB_HOST=db
+DB_NAME=postgres
+DB_USER=postgres
+DB_PASSWORD=postgres
+```
 
 ## Architecture
 
@@ -30,13 +36,13 @@ flowchart LR
     U -->|Navigateur| J[Jaeger UI<br/>localhost:16686]
 
     subgraph APPS[python_apps_with_db]
-        S[server]
-        C[client]
+        S[api-server-db]
+        C[api-client-db]
         DB[(PostgreSQL)]
-        SL[python_apps_with_db/runtime_logs/server/api-server-db.log]
-        CL[python_apps_with_db/runtime_logs/client/api-client-db.log]
-        FBS[Filebeat server]
-        FBC[Filebeat client]
+        SL[api-server-db.log]
+        CL[api-client-db.log]
+        FBS[filebeat-server-db]
+        FBC[filebeat-client-db]
 
         C -->|HTTP| S
         S --> DB
@@ -53,56 +59,22 @@ flowchart LR
         J
     end
 
-    FBS -->|Beats| L
-    FBC -->|Beats| L
+    FBS --> L
+    FBC --> L
     L --> E
     E --> K
-    S -->|OTLP traces| J
-    C -->|OTLP traces| J
 ```
-
-## Ports
-
-- `8000` : API Flask
-- `9200` : Elasticsearch
-- `5601` : Kibana
-- `16686` : Jaeger UI
-- `4317` : OTLP gRPC
-- `5044` : entree Beats de Logstash
-- `5000` : entree TCP JSON optionnelle de Logstash
 
 ## Demarrage
-
-### 1. Demarrer ELK
-
-```bash
-cd /root/ELK
-docker compose up -d
-```
-
-### 2. Demarrer l'application avec PostgreSQL
-
-```bash
-cd /root/ELK/python_apps_with_db
-docker compose up --build -d
-```
-
-## Utilisation avec Make
 
 Depuis la racine du projet :
 
 ```bash
 cd /root/ELK
-make help
-```
-
-Commande recommandee pour cette branche :
-
-```bash
 make consigne5
 ```
 
-Autres commandes utiles :
+## Commandes utiles
 
 ```bash
 make status
@@ -110,39 +82,25 @@ make clean
 make prune
 ```
 
-## Fonctionnement
+Effet des commandes :
 
-1. `db` demarre PostgreSQL.
-2. `server` initialise la base puis ecrit `api-server-db.log` dans `python_apps_with_db/runtime_logs/server/`.
-3. `client` ecrit `api-client-db.log` dans `python_apps_with_db/runtime_logs/client/`.
-4. `filebeat-server` lit uniquement les logs du serveur.
-5. `filebeat-client` lit uniquement les logs du client.
-6. les deux envoient les evenements vers `logstash:5044`.
-7. `Logstash` parse les lignes et enrichit les evenements.
-8. `Elasticsearch` les indexe.
-9. `Kibana` permet de rechercher les logs.
+- `make consigne5` bascule sur `consigne-5-python-apps-with-db`, lance ELK, puis `python_apps_with_db`
+- `make status` affiche l'etat de la stack et des services avec base de donnees
+- `make clean` arrete proprement tous les conteneurs
+- `make prune` supprime aussi les volumes et les logs generes
 
 ## Verification
 
-### API
+- API Flask : `http://localhost:8000`
+- Kibana : `http://localhost:5601`
+- Jaeger UI : `http://localhost:16686`
 
-```text
-http://localhost:8000
-```
+Fichiers de logs distinctifs :
 
-### Kibana
+- `python_apps_with_db/runtime_logs/server/api-server-db.log`
+- `python_apps_with_db/runtime_logs/client/api-client-db.log`
 
-```text
-http://localhost:5601
-```
-
-### Jaeger UI
-
-```text
-http://localhost:16686
-```
-
-Dans `Discover`, utilise la Data View `demo`, puis essaye par exemple :
+Filtres KQL utiles :
 
 ```text
 source_filename : "api-server-db.log"
@@ -153,54 +111,18 @@ source_filename : "api-client-db.log"
 ```
 
 ```text
-message : "*database*" or message : "*PostgreSQL*" or message : "*Fake query failed*"
+message : "*PostgreSQL*" or message : "*database*"
 ```
 
 ```text
 level : "ERROR" or level : "CRITICAL"
 ```
 
-## Reconstruction rapide
-
-### Tout lancer
-
-```bash
-cd /root/ELK
-docker compose up -d
-
-cd /root/ELK/python_apps_with_db
-docker compose up --build -d
-```
-
-### Tout arreter
-
-```bash
-cd /root/ELK/python_apps_with_db
-docker compose down
-
-cd /root/ELK
-docker compose down
-```
-
-### Repartir proprement
-
-```bash
-cd /root/ELK/python_apps_with_db
-docker compose down
-
-cd /root/ELK
-docker compose down
-docker compose up -d
-
-cd /root/ELK/python_apps_with_db
-docker compose up --build -d
-```
-
 ## Fichiers importants
 
-- [docker-compose.yml](/root/ELK/docker-compose.yml)
-- [logstash.conf](/root/ELK/logstash/pipeline/logstash.conf)
-- [python_apps_with_db/docker-compose.yml](/root/ELK/python_apps_with_db/docker-compose.yml)
-- [server-filebeat.yml](/root/ELK/python_apps_with_db/filebeat/server-filebeat.yml)
-- [client-filebeat.yml](/root/ELK/python_apps_with_db/filebeat/client-filebeat.yml)
-- [README_fr-FR.md](/root/ELK/python_apps_with_db/README_fr-FR.md)
+- [docker-compose.yml](/root/elk-worktrees/consigne5/docker-compose.yml)
+- [python_apps_with_db/docker-compose.yml](/root/elk-worktrees/consigne5/python_apps_with_db/docker-compose.yml)
+- [python_apps_with_db/server/server.py](/root/elk-worktrees/consigne5/python_apps_with_db/server/server.py)
+- [python_apps_with_db/client/client.py](/root/elk-worktrees/consigne5/python_apps_with_db/client/client.py)
+- [Makefile](/root/elk-worktrees/consigne5/Makefile)
+- [scripts/infra.sh](/root/elk-worktrees/consigne5/scripts/infra.sh)
