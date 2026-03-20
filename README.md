@@ -20,13 +20,13 @@ L'objectif du `main` est simple :
 
 ## Tableau recapitulatif
 
-| Consigne | Commande | Ce que ca lance | Ports utiles | Verification recommandee |
-| --- | --- | --- | --- | --- |
-| 1 | `make consigne1` | ELK + ingestion de logs statiques | `5601`, `9200` | ouvrir Kibana et verifier les index `elk-demo-*` |
-| 2 | `make consigne2` | ELK + `python_apps` + Filebeat partage | `8000`, `5601`, `9200` | verifier `server.log` et `client.log` dans Kibana |
-| 3 | `make consigne3` | ELK + `python_apps` + un Filebeat par service | `8000`, `5601`, `9200` | verifier la separation des logs client / serveur |
-| 4 | `make consigne4` | ELK + `python_apps` + Jaeger UI | `8000`, `5601`, `9200`, `16686` | verifier les logs dans Kibana et les traces dans Jaeger |
-| 5 | `make consigne5` | ELK + `python_apps_with_db` + PostgreSQL | `8000`, `5601`, `9200`, `16686` | verifier `api-client-db`, `api-server-db` et les logs lies a PostgreSQL |
+| Consigne | Commande | Commande d'arret | Ce que ca lance | Ports utiles | Verification recommandee |
+| --- | --- | --- | --- | --- | --- |
+| 1 | `make consigne1` | `make clean1` | ELK + ingestion de logs statiques | `5601`, `9200` | ouvrir Kibana et verifier les index `elk-demo-*` |
+| 2 | `make consigne2` | `make clean2` | ELK + `python_apps` + Filebeat partage | `8000`, `5601`, `9200` | verifier `server.log` et `client.log` dans Kibana |
+| 3 | `make consigne3` | `make clean3` | ELK + `python_apps` + un Filebeat par service | `8000`, `5601`, `9200` | verifier la separation des logs client / serveur |
+| 4 | `make consigne4` | `make clean4` | ELK + `python_apps` + Jaeger UI | `8000`, `5601`, `9200`, `16686` | verifier les logs dans Kibana et les traces dans Jaeger |
+| 5 | `make consigne5` | `make clean5` | ELK + `python_apps_with_db` + PostgreSQL | `8000`, `5601`, `9200`, `16686` | verifier `api-client-db`, `api-server-db` et les logs lies a PostgreSQL |
 
 ## Prerequis
 
@@ -117,15 +117,23 @@ make clean
 Ou :
 
 ```bash
+make clean1
+make clean2
+make clean3
+make clean4
+make clean5
 make clean-all
 ```
 
-La commande :
+Commandes disponibles :
 
-- arrete `python_apps` si la variante est presente
-- arrete `python_apps_with_db` si la variante est presente
-- arrete la stack ELK
-- supprime les conteneurs et les reseaux dedies
+- `make clean1` arrete ce que `make consigne1` a lance
+- `make clean2` arrete ce que `make consigne2` a lance
+- `make clean3` arrete ce que `make consigne3` a lance
+- `make clean4` arrete ce que `make consigne4` a lance
+- `make clean5` arrete ce que `make consigne5` a lance
+- `make clean-all` arrete toutes les stacks du projet
+- `make clean` reste un alias de `make clean-all`
 
 ### Nettoyer completement
 

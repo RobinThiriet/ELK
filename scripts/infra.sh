@@ -157,27 +157,96 @@ deploy_current_branch() {
   esac
 }
 
-clean_stack() {
-  echo "-> Arret de python_apps si present"
-  compose_python down --remove-orphans || true
+remove_named_containers() {
+  docker rm -f "$@" >/dev/null 2>&1 || true
+}
 
-  echo "-> Arret de python_apps_with_db si present"
-  compose_python_with_db down --remove-orphans || true
-
-  echo "-> Arret de la stack ELK"
-  compose_root down --remove-orphans || true
-
-  echo "-> Suppression des conteneurs eventuellement restants"
-  docker rm -f "${PY_CONTAINERS[@]}" "${ROOT_CONTAINERS[@]}" >/dev/null 2>&1 || true
-
-  echo "-> Suppression des reseaux dedies"
-  for network in "${NETWORKS[@]}"; do
+remove_named_networks() {
+  for network in "$@"; do
     docker network rm "$network" >/dev/null 2>&1 || true
   done
 }
 
+clean_root_stack() {
+  echo "-> Arret de la stack ELK"
+  compose_root down --remove-orphans || true
+
+  echo "-> Suppression des conteneurs ELK eventuellement restants"
+  remove_named_containers "${ROOT_CONTAINERS[@]}"
+}
+
+clean_python_stack() {
+  echo "-> Arret de python_apps si present"
+  compose_python down --remove-orphans || true
+
+  echo "-> Suppression des conteneurs python_apps eventuellement restants"
+  remove_named_containers \
+    "chaos-api-server" \
+    "chaos-api-client" \
+    "chaos-filebeat-server" \
+    "chaos-filebeat-client"
+}
+
+clean_python_with_db_stack() {
+  echo "-> Arret de python_apps_with_db si present"
+  compose_python_with_db down --remove-orphans || true
+
+  echo "-> Suppression des conteneurs python_apps_with_db eventuellement restants"
+  remove_named_containers \
+    "chaos-api-server-db" \
+    "chaos-api-client-db" \
+    "chaos-filebeat-server-db" \
+    "chaos-filebeat-client-db" \
+    "chaos-db-server-db"
+}
+
+clean_consigne1() {
+  clean_root_stack
+  echo "-> Suppression des reseaux dedies"
+  remove_named_networks "${NETWORKS[@]}"
+}
+
+clean_consigne2() {
+  clean_python_stack
+  clean_root_stack
+  echo "-> Suppression des reseaux dedies"
+  remove_named_networks "${NETWORKS[@]}"
+}
+
+clean_consigne3() {
+  clean_python_stack
+  clean_root_stack
+  echo "-> Suppression des reseaux dedies"
+  remove_named_networks "${NETWORKS[@]}"
+}
+
+clean_consigne4() {
+  clean_python_stack
+  clean_root_stack
+  echo "-> Suppression des reseaux dedies"
+  remove_named_networks "${NETWORKS[@]}"
+}
+
+clean_consigne5() {
+  clean_python_with_db_stack
+  clean_root_stack
+  echo "-> Suppression des reseaux dedies"
+  remove_named_networks "${NETWORKS[@]}"
+}
+
+clean_all_stacks() {
+  clean_python_stack
+
+  clean_python_with_db_stack
+
+  clean_root_stack
+
+  echo "-> Suppression des reseaux dedies"
+  remove_named_networks "${NETWORKS[@]}"
+}
+
 prune_stack() {
-  clean_stack
+  clean_all_stacks
 
   echo "-> Suppression des volumes dedies"
   for volume in "${VOLUMES[@]}"; do
@@ -214,7 +283,7 @@ usage() {
 Usage:
   ./scripts/infra.sh up
   ./scripts/infra.sh deploy consigne1|consigne2|consigne3|consigne4|consigne5
-  ./scripts/infra.sh clean
+  ./scripts/infra.sh clean consigne1|consigne2|consigne3|consigne4|consigne5|all
   ./scripts/infra.sh prune
   ./scripts/infra.sh status
   ./scripts/infra.sh branch
@@ -238,7 +307,15 @@ main() {
       esac
       ;;
     clean)
-      clean_stack
+      case "${2:-all}" in
+        consigne1) clean_consigne1 ;;
+        consigne2) clean_consigne2 ;;
+        consigne3) clean_consigne3 ;;
+        consigne4) clean_consigne4 ;;
+        consigne5) clean_consigne5 ;;
+        all) clean_all_stacks ;;
+        *) usage; exit 1 ;;
+      esac
       ;;
     prune)
       prune_stack
