@@ -105,7 +105,7 @@ status_code : 404
 
 ## Fichiers importants
 
-- [docker-compose.yml](/root/elk-worktrees/consigne1/docker-compose.yml)
-- [logstash/pipeline/logstash.conf](/root/elk-worktrees/consigne1/logstash/pipeline/logstash.conf)
-- [Makefile](/root/elk-worktrees/consigne1/Makefile)
-- [scripts/infra.sh](/root/elk-worktrees/consigne1/scripts/infra.sh)
+- [docker-compose.yml](/root/ELK/docker-compose.yml)
+- [logstash/pipeline/logstash.conf](/root/ELK/logstash/pipeline/logstash.conf)
+- [Makefile](/root/ELK/Makefile)
+- [scripts/infra.sh](/root/ELK/scripts/infra.sh)
