@@ -113,8 +113,8 @@ La stack recree aussi automatiquement la Data View `demo`, une recherche sauvega
 
 ## Fichiers importants
 
-- [docker-compose.yml](/root/elk-worktrees/consigne4/docker-compose.yml)
-- [python_apps/docker-compose.yml](/root/elk-worktrees/consigne4/python_apps/docker-compose.yml)
-- [scripts/kibana-bootstrap.sh](/root/elk-worktrees/consigne4/scripts/kibana-bootstrap.sh)
-- [Makefile](/root/elk-worktrees/consigne4/Makefile)
-- [scripts/infra.sh](/root/elk-worktrees/consigne4/scripts/infra.sh)
+- [docker-compose.yml](/root/ELK/docker-compose.yml)
+- [python_apps/docker-compose.yml](/root/ELK/python_apps/docker-compose.yml)
+- [scripts/kibana-bootstrap.sh](/root/ELK/scripts/kibana-bootstrap.sh)
+- [Makefile](/root/ELK/Makefile)
+- [scripts/infra.sh](/root/ELK/scripts/infra.sh)
