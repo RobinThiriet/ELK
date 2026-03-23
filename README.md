@@ -89,6 +89,16 @@ Chaque cible :
 - demarre les services necessaires
 - prepare l'environnement de logs associe si besoin
 
+Important :
+
+- le projet se pilote uniquement depuis `/root/ELK`
+- apres `make consigneX`, le depot reste sur la branche de la consigne lancee
+- pour revenir sur la documentation globale, il faut repasser sur `main`
+
+```bash
+git checkout main
+```
+
 ### Voir l'etat courant
 
 ```bash
