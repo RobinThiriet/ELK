@@ -108,8 +108,8 @@ event_type : "client_connection_failed" or event_type : "client_timeout"
 
 ## Fichiers importants
 
-- [docker-compose.yml](/root/elk-worktrees/consigne2/docker-compose.yml)
-- [python_apps/docker-compose.yml](/root/elk-worktrees/consigne2/python_apps/docker-compose.yml)
-- [filebeat/filebeat.yml](/root/elk-worktrees/consigne2/filebeat/filebeat.yml)
-- [Makefile](/root/elk-worktrees/consigne2/Makefile)
-- [scripts/infra.sh](/root/elk-worktrees/consigne2/scripts/infra.sh)
+- [docker-compose.yml](/root/ELK/docker-compose.yml)
+- [python_apps/docker-compose.yml](/root/ELK/python_apps/docker-compose.yml)
+- [filebeat/filebeat.yml](/root/ELK/filebeat/filebeat.yml)
+- [Makefile](/root/ELK/Makefile)
+- [scripts/infra.sh](/root/ELK/scripts/infra.sh)
