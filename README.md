@@ -120,9 +120,9 @@ level : "ERROR" or level : "CRITICAL"
 
 ## Fichiers importants
 
-- [docker-compose.yml](/root/elk-worktrees/consigne5/docker-compose.yml)
-- [python_apps_with_db/docker-compose.yml](/root/elk-worktrees/consigne5/python_apps_with_db/docker-compose.yml)
-- [python_apps_with_db/server/server.py](/root/elk-worktrees/consigne5/python_apps_with_db/server/server.py)
-- [python_apps_with_db/client/client.py](/root/elk-worktrees/consigne5/python_apps_with_db/client/client.py)
-- [Makefile](/root/elk-worktrees/consigne5/Makefile)
-- [scripts/infra.sh](/root/elk-worktrees/consigne5/scripts/infra.sh)
+- [docker-compose.yml](/root/ELK/docker-compose.yml)
+- [python_apps_with_db/docker-compose.yml](/root/ELK/python_apps_with_db/docker-compose.yml)
+- [python_apps_with_db/server/server.py](/root/ELK/python_apps_with_db/server/server.py)
+- [python_apps_with_db/client/client.py](/root/ELK/python_apps_with_db/client/client.py)
+- [Makefile](/root/ELK/Makefile)
+- [scripts/infra.sh](/root/ELK/scripts/infra.sh)
